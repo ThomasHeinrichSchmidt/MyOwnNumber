@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Debug;
 import android.provider.Telephony;
 import android.support.v7.app.ActionBarActivity;
 import android.telephony.PhoneNumberUtils;
@@ -31,20 +30,22 @@ public class MainActivity extends ActionBarActivity {
 
     // http://stackoverflow.com/questions/17371470/changing-ic-launcher-png-in-android-studio
 
-    static String mPhoneNumber = "";
+    private static String ownPhoneNumber = "";
     private static final String TAG = MainActivity.class.getSimpleName();
+
     // TODO: conditionally remove LOG.d() in release build by using private static final boolean Debug
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate(): enter");
+        Log.d(TAG, "onCreate(): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
         super.onCreate(savedInstanceState);
         // TODO: do not show activity if called from notification, just send SMS
         setContentView(R.layout.activity_main);
 
-        // retrieve calling number, if activity was started by Notification
+        // retrieve calling number, if activity was started by Notification, i.e. a calling number has been set
         Bundle extras = getIntent().getExtras();
-        if (extras != null && mPhoneNumber != "") {
+        if (extras != null) {
             Log.d(TAG, "onCreate(): found extras!");
             String mCallingNumber = getString(R.string.UnknownPhoneNumber);
             if (android.os.Build.VERSION.SDK_INT < 21) {
@@ -54,29 +55,28 @@ public class MainActivity extends ActionBarActivity {
             else {
                 mCallingNumber = extras.getString("CallingNumber", "");
             }
-            if (mCallingNumber != "" ) {
-                //If #Debug
+            if (!mCallingNumber.equals("")) {
                 Log.d(TAG, "onCreate(): found calling number = " + mCallingNumber);
-                Log.d(TAG, "onCreate(): now text/SMS " + mPhoneNumber + " to " + mCallingNumber);
+                Log.d(TAG, "onCreate(): now text/SMS " + getOwnPhoneNumber(getApplicationContext()) + " to " + mCallingNumber);
                 //End if
-                boolean sendSMS = false;
+                final boolean sendSMS = false;
                 if (sendSMS) {
                     // needs <uses-permission android:name="android.permission.SEND_SMS"/> in AndroidManifest
                     SmsManager sms = SmsManager.getDefault();
                     PendingIntent sentIntent = null;
                     PendingIntent deliveryIntent = null;
-                    sms.sendTextMessage(mCallingNumber, "", mPhoneNumber, sentIntent, deliveryIntent );   // http://developer.android.com/reference/android/telephony/SmsManager.html
-                    String info = "\u2709 '" + mPhoneNumber + "' \u27A0  \u260F" + mCallingNumber;  // ? ? ?  (U+2709 U+27A0 U260F)
+                    sms.sendTextMessage(mCallingNumber, "", getOwnPhoneNumber(getApplicationContext()), sentIntent, deliveryIntent );   // http://developer.android.com/reference/android/telephony/SmsManager.html
+                    String info = "\u2709 '" + getOwnPhoneNumber(getApplicationContext()) + "' \u27A0  \u260F" + mCallingNumber;  // ? ? ?  (U+2709 U+27A0 U260F)
                     Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
                 }
                 else {
                     Intent smsIntent = new Intent(Intent.ACTION_VIEW);
                     smsIntent.setType("vnd.android-dir/mms-sms");
                     smsIntent.putExtra("address", mCallingNumber);
-                    smsIntent.putExtra("sms_body",mPhoneNumber);
+                    smsIntent.putExtra("sms_body", getOwnPhoneNumber(getApplicationContext()));
                     startActivity(smsIntent);
-                    // TODO: check if works for all API levels  "Be aware, this will not work for android 4.4 and probably up... "vnd.android-dir/mms-sms" is not longer supported –  Max Ch Jan 9 '14 at 18:32 - http://stackoverflow.com/questions/2372248/launch-sms-application-with-an-intent"
-                    // see below: sneSMS()
+                    // TODO: check if works for all API levels  "Be aware, this will not work for android 4.4 and probably up... "vnd.android-dir/mms-sms" is not longer supported, Max Ch Jan 9 '14 at 18:32 - http://stackoverflow.com/questions/2372248/launch-sms-application-with-an-intent"
+                    // see below: sendSms()
                     /**
                         To start the SMS app with number populated use action ACTION_SENDTO:
                             Intent intent = new Intent(Intent.ACTION_SENDTO);
@@ -89,44 +89,22 @@ public class MainActivity extends ActionBarActivity {
                 }
                 Log.d(TAG, "onCreate(): cancel Notification " + DisplayNotification.NOTIFICATION_ID);
                 cancelNotification(getApplicationContext(), DisplayNotification.NOTIFICATION_ID);
+                Log.d(TAG, "onCreate(): removeExtra('CallingNumber')");
+                getIntent().removeExtra("CallingNumber");
             }
         }
 
-        // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
         final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
-        TelephonyManager tMgr = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        mPhoneNumber = tMgr.getLine1Number();
-        if (mPhoneNumber != null && mPhoneNumber.length() > 2) {
-            // mPhoneNumber = mPhoneNumber.substring(2);
-            if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {  // LOLLIPOP = 21
-                mPhoneNumber = PhoneNumberUtils.formatNumber(mPhoneNumber);
-            }
-            else {
-                String formattedNumber = PhoneNumberUtils.formatNumber(mPhoneNumber, getUserCountry(getApplicationContext()));
-                if (formattedNumber != null) mPhoneNumber = formattedNumber;
-            }
-        }
-        else {
-            /*
-            http://stackoverflow.com/questions/2480288/programmatically-obtain-the-phone-number-of-the-android-phone
-            Query all the INBOX folder SMS by sms provider and get the "TO" numbers or the SENT folder - "FROM" numbers.
-            Extra benefits of this trick: 1. you can get all the line numbers if there is multi sim in the device.
-            You will get all the sim numbers ever used in the device, check time frame (sms received or sent only today) etc.
-             */
-            mPhoneNumber = getString(R.string.UnknownPhoneNumber);
-        }
-        myTextBox.setText(mPhoneNumber);
+        myTextBox.setText(getOwnPhoneNumber(getApplicationContext()));
         // http://stackoverflow.com/questions/22679700/android-how-to-get-phone-number-from-the-dual-sim-phone
 
         myTextBox.addTextChangedListener(new TextWatcher() {
-            public void afterTextChanged(Editable s) {
-                Log.d(TAG, "addTextChangedListener(): enter afterTextChanged()");
-            }
-
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                 Log.d(TAG, "addTextChangedListener(): enter beforeTextChanged()");
             }
-
+            public void afterTextChanged(Editable s) {
+                Log.d(TAG, "addTextChangedListener(): enter afterTextChanged()");
+            }
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // TextView myOutputBox = (TextView) findViewById(R.id.myOutputBox);
                 // myOutputBox.setText(s);
@@ -134,6 +112,36 @@ public class MainActivity extends ActionBarActivity {
             }
         });
         Log.d(TAG, "onCreate(): leave");
+    }
+
+    public static String getOwnPhoneNumber(Context context) {
+        if (ownPhoneNumber.equals("")) {
+            // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
+            TelephonyManager tMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+            setOwnPhoneNumber(tMgr.getLine1Number());
+            if ((null != ownPhoneNumber) && (ownPhoneNumber.length() > 2)) {
+                // ownPhoneNumber = ownPhoneNumber.substring(2);
+                if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {  // LOLLIPOP = 21
+                    setOwnPhoneNumber(PhoneNumberUtils.formatNumber(ownPhoneNumber));
+                } else {
+                    String formattedNumber = PhoneNumberUtils.formatNumber(ownPhoneNumber, getUserCountry(context.getApplicationContext()));
+                    if (formattedNumber != null) setOwnPhoneNumber(formattedNumber);
+                }
+            } else {
+            /*
+            http://stackoverflow.com/questions/2480288/programmatically-obtain-the-phone-number-of-the-android-phone
+            Query all the INBOX folder SMS by sms provider and get the "TO" numbers or the SENT folder - "FROM" numbers.
+            Extra benefits of this trick: 1. you can get all the line numbers if there is multi sim in the device.
+            You will get all the sim numbers ever used in the device, check time frame (sms received or sent only today) etc.
+             */
+                setOwnPhoneNumber(context.getString(R.string.UnknownPhoneNumber));
+            }
+        }
+        return ownPhoneNumber;
+    }
+
+    private static void setOwnPhoneNumber(String ownPhoneNumber) {
+        MainActivity.ownPhoneNumber = ownPhoneNumber;
     }
 
     /**

@@ -30,8 +30,8 @@ public class MyPhoneReceiver extends BroadcastReceiver {
                 Log.d(TAG, "onReceive(): calling phone number is " + phoneNumber);
                 Context appContext = context.getApplicationContext();
                 Log.d(TAG, "onReceive(): getting context " + appContext.toString());
-                Log.d(TAG, "onReceive(): MainActivity.mPhoneNumber " + MainActivity.mPhoneNumber);
-                String info = "My Own Number\n\u260F" + MainActivity.mPhoneNumber; // white telephone
+                Log.d(TAG, "onReceive(): MainActivity.ownPhoneNumber is '" + MainActivity.getOwnPhoneNumber(context) +"'");
+                String info = "My Own Number\n\u260F" + MainActivity.getOwnPhoneNumber(context); // white telephone
                 // show own number to improve user memory
                 Toast.makeText(context, info, Toast.LENGTH_LONG).show();
                 // http://www.laurivan.com/android-display-a-notification/
