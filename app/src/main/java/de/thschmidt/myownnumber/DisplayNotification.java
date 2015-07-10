@@ -23,7 +23,7 @@ class DisplayNotification implements Runnable {
      * NOTIFICATION_ID is a numeric value that identifies the notification that we'll be sending.
      * This value needs to be unique within this app, but it doesn't need to be unique system-wide.
      */
-    private static final int NOTIFICATION_ID = 1;
+    public static final int NOTIFICATION_ID = 718477;
 
     public DisplayNotification(Context mContext, String callingNumber) {
         this.mContext = mContext;
@@ -38,8 +38,9 @@ class DisplayNotification implements Runnable {
     }
 
     private void makeNotification(Context context) {
+        // register MainActivity to handle click on Notification
         Intent intent = new Intent(context, MainActivity.class);
-
+        intent.putExtra("CallingNumber", mCallingNumber);
         PendingIntent pendingIntent = PendingIntent.getActivity(context,
                 NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         // http://stackoverflow.com/questions/13717492/notifications-builder-in-api-10

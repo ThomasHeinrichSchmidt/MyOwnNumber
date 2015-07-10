@@ -1,16 +1,29 @@
 package de.thschmidt.myownnumber;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Debug;
+import android.provider.Telephony;
 import android.support.v7.app.ActionBarActivity;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
+import android.widget.Toast;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 
@@ -20,11 +33,64 @@ public class MainActivity extends ActionBarActivity {
 
     static String mPhoneNumber = "";
     private static final String TAG = MainActivity.class.getSimpleName();
+    // TODO: conditionally remove LOG.d() in release build by using private static final boolean Debug
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate(): enter");
         super.onCreate(savedInstanceState);
+        // TODO: do not show activity if called from notification, just send SMS
         setContentView(R.layout.activity_main);
+
+        // retrieve calling number, if activity was started by Notification
+        Bundle extras = getIntent().getExtras();
+        if (extras != null && mPhoneNumber != "") {
+            Log.d(TAG, "onCreate(): found extras!");
+            String mCallingNumber = getString(R.string.UnknownPhoneNumber);
+            if (android.os.Build.VERSION.SDK_INT < 21) {
+                mCallingNumber = "";
+                mCallingNumber = (String) extras.get("CallingNumber");
+            }
+            else {
+                mCallingNumber = extras.getString("CallingNumber", "");
+            }
+            if (mCallingNumber != "" ) {
+                //If #Debug
+                Log.d(TAG, "onCreate(): found calling number = " + mCallingNumber);
+                Log.d(TAG, "onCreate(): now text/SMS " + mPhoneNumber + " to " + mCallingNumber);
+                //End if
+                boolean sendSMS = false;
+                if (sendSMS) {
+                    // needs <uses-permission android:name="android.permission.SEND_SMS"/> in AndroidManifest
+                    SmsManager sms = SmsManager.getDefault();
+                    PendingIntent sentIntent = null;
+                    PendingIntent deliveryIntent = null;
+                    sms.sendTextMessage(mCallingNumber, "", mPhoneNumber, sentIntent, deliveryIntent );   // http://developer.android.com/reference/android/telephony/SmsManager.html
+                    String info = "\u2709 '" + mPhoneNumber + "' \u27A0  \u260F" + mCallingNumber;  // ? ? ?  (U+2709 U+27A0 U260F)
+                    Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
+                }
+                else {
+                    Intent smsIntent = new Intent(Intent.ACTION_VIEW);
+                    smsIntent.setType("vnd.android-dir/mms-sms");
+                    smsIntent.putExtra("address", mCallingNumber);
+                    smsIntent.putExtra("sms_body",mPhoneNumber);
+                    startActivity(smsIntent);
+                    // TODO: check if works for all API levels  "Be aware, this will not work for android 4.4 and probably up... "vnd.android-dir/mms-sms" is not longer supported –  Max Ch Jan 9 '14 at 18:32 - http://stackoverflow.com/questions/2372248/launch-sms-application-with-an-intent"
+                    // see below: sneSMS()
+                    /**
+                        To start the SMS app with number populated use action ACTION_SENDTO:
+                            Intent intent = new Intent(Intent.ACTION_SENDTO);
+                            intent.setData(Uri.parse("smsto:" + Uri.encode(phoneNumber)));
+                            startActivity(intent);
+                        This will work on Android 4.4. It should also work on earlier versions of Android however as the APIs were never public the behavior might vary.
+                        If you didn't have issues with your prior method I would probably just stick to that pre-4.4 and use ACTION_SENDTO for 4.4+.
+                        http://stackoverflow.com/questions/19853220/android4-4-can-not-handle-sms-intent-with-vnd-android-dir-mms-sms
+                    */
+                }
+                Log.d(TAG, "onCreate(): cancel Notification " + DisplayNotification.NOTIFICATION_ID);
+                cancelNotification(getApplicationContext(), DisplayNotification.NOTIFICATION_ID);
+            }
+        }
 
         // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
         final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
@@ -32,7 +98,7 @@ public class MainActivity extends ActionBarActivity {
         mPhoneNumber = tMgr.getLine1Number();
         if (mPhoneNumber != null && mPhoneNumber.length() > 2) {
             // mPhoneNumber = mPhoneNumber.substring(2);
-            if (android.os.Build.VERSION.SDK_INT < 21) {
+            if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {  // LOLLIPOP = 21
                 mPhoneNumber = PhoneNumberUtils.formatNumber(mPhoneNumber);
             }
             else {
@@ -54,19 +120,20 @@ public class MainActivity extends ActionBarActivity {
 
         myTextBox.addTextChangedListener(new TextWatcher() {
             public void afterTextChanged(Editable s) {
-                Log.v(TAG, "addTextChangedListener(): enter afterTextChanged()");
+                Log.d(TAG, "addTextChangedListener(): enter afterTextChanged()");
             }
 
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                Log.v(TAG, "addTextChangedListener(): enter beforeTextChanged()");
+                Log.d(TAG, "addTextChangedListener(): enter beforeTextChanged()");
             }
 
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // TextView myOutputBox = (TextView) findViewById(R.id.myOutputBox);
                 // myOutputBox.setText(s);
-                Log.v(TAG, "addTextChangedListener(): enter onTextChanged()");
+                Log.d(TAG, "addTextChangedListener(): enter onTextChanged()");
             }
         });
+        Log.d(TAG, "onCreate(): leave");
     }
 
     /**
@@ -95,6 +162,47 @@ public class MainActivity extends ActionBarActivity {
         return null;
     }
 
+    // http://stackoverflow.com/questions/20079047/android-kitkat-4-4-hangouts-cannot-handle-sending-sms-intent
+    public static boolean sendSms(Context context, String text, String number) {
+        return sendSms(context, text, Collections.singletonList(number));
+    }
+    public static boolean sendSms(Context context, String text, List<String> numbers) {
+
+        String numbersStr = TextUtils.join(",", numbers);
+
+        Uri uri = Uri.parse("sms:" + numbersStr);
+
+        Intent intent = new Intent();
+        intent.setData(uri);
+        intent.putExtra(Intent.EXTRA_TEXT, text);
+        intent.putExtra("sms_body", text);
+        intent.putExtra("address", numbersStr);
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            intent.setAction(Intent.ACTION_SENDTO);
+            String defaultSmsPackageName = Telephony.Sms.getDefaultSmsPackage(context);
+            if(defaultSmsPackageName != null) {
+                intent.setPackage(defaultSmsPackageName);
+            }
+        } else {
+            intent.setAction(Intent.ACTION_VIEW);
+            intent.setType("vnd.android-dir/mms-sms");
+        }
+
+        try {
+            context.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    public static void cancelNotification(Context context, int notifyId) {
+        String notificationService = Context.NOTIFICATION_SERVICE;
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(notificationService);
+        notificationManager.cancel(notifyId);
+    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
