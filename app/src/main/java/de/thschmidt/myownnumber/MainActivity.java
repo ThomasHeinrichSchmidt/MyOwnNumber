@@ -14,14 +14,12 @@ import android.widget.EditText;
 import java.util.Locale;
 
 
-// Activity implements ActivityCallback, and hence it's function definitions, see below.
-// http://stackoverflow.com/questions/10996479/how-to-update-a-textview-of-an-activity-from-another-class
-
-public class MainActivity extends ActionBarActivity implements ActivityCallback {
+public class MainActivity extends ActionBarActivity {
 
     // http://stackoverflow.com/questions/17371470/changing-ic-launcher-png-in-android-studio
 
-    static String mPhoneNumber = "+?? ???-???-????";
+    static String mPhoneNumber = "";
+    private static final String TAG = MainActivity.class.getSimpleName();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,7 +30,6 @@ public class MainActivity extends ActionBarActivity implements ActivityCallback 
         final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
         TelephonyManager tMgr = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         mPhoneNumber = tMgr.getLine1Number();
-        Locale mDefaultLocale = Locale.getDefault();
         if (mPhoneNumber != null && mPhoneNumber.length() > 2) {
             // mPhoneNumber = mPhoneNumber.substring(2);
             if (android.os.Build.VERSION.SDK_INT < 21) {
@@ -50,23 +47,25 @@ public class MainActivity extends ActionBarActivity implements ActivityCallback 
             Extra benefits of this trick: 1. you can get all the line numbers if there is multi sim in the device.
             You will get all the sim numbers ever used in the device, check time frame (sms received or sent only today) etc.
              */
-            mPhoneNumber = "+?? ???-???-????";
+            mPhoneNumber = getString(R.string.UnknownPhoneNumber);
         }
         myTextBox.setText(mPhoneNumber);
         // http://stackoverflow.com/questions/22679700/android-how-to-get-phone-number-from-the-dual-sim-phone
 
         myTextBox.addTextChangedListener(new TextWatcher() {
-             public void afterTextChanged(Editable s) {
-                 Log.v("", "inside afterTextChanged");
-             }
-             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                 Log.v("", "inside beforeTextChanged");
-             }
-             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                 // TextView myOutputBox = (TextView) findViewById(R.id.myOutputBox);
-                 // myOutputBox.setText(s);
-                 Log.v("", "inside onTextChanged");
-             }
+            public void afterTextChanged(Editable s) {
+                Log.v(TAG, "addTextChangedListener(): enter afterTextChanged()");
+            }
+
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                Log.v(TAG, "addTextChangedListener(): enter beforeTextChanged()");
+            }
+
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // TextView myOutputBox = (TextView) findViewById(R.id.myOutputBox);
+                // myOutputBox.setText(s);
+                Log.v(TAG, "addTextChangedListener(): enter onTextChanged()");
+            }
         });
     }
 
@@ -76,7 +75,7 @@ public class MainActivity extends ActionBarActivity implements ActivityCallback 
      * @param context Context reference to get the TelephonyManager instance from
      * @return country code or null
      */
-    public static String getUserCountry(Context context) {
+    private static String getUserCountry(Context context) {
         try {
             final TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
             final String simCountry = tm.getSimCountryIso();
@@ -90,7 +89,9 @@ public class MainActivity extends ActionBarActivity implements ActivityCallback 
                 }
             }
         }
-        catch (Exception e) { }
+        catch (Exception e) {
+            Log.d(TAG, "getUserCountry(): exception caught " + e.toString());
+        }
         return null;
     }
 
@@ -115,21 +116,5 @@ public class MainActivity extends ActionBarActivity implements ActivityCallback 
 
         return super.onOptionsItemSelected(item);
     }
-
-
-    @Override
-    public void UpdateOwnNumber(String number)
-    {
-        final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
-        myTextBox.setText(number);
-    }
-
-    @Override
-    public String GetOwnNumber()
-    {
-        final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
-        return myTextBox.getText().toString();
-    }
-
 }
 

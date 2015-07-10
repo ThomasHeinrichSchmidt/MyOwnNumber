@@ -6,5 +6,7 @@
     <string name="action_settings">Settings</string>
     <string name="MyOwnNumber">My Own Number</string>
     <string name="MyOwnNumberDesc">This is my own telephone number</string>
+    <string name="DefaultPhoneNumber">xx49 3210 12345678</string>
+    <string name="UnknownPhoneNumber">+?? ???-???-????</string>
 
 </resources>

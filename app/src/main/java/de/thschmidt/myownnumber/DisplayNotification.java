@@ -10,26 +10,26 @@ import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 
 /**
- * Created by Thomas H. Schmidt on 03.07.2015.
+ * Created by  Created by --thomas. in June 2015.
+ * used to display a notification about incoming calls and
+ * offer to text/SMS the own number to the caller
  */
-public class DisplayNotification implements Runnable {
+class DisplayNotification implements Runnable {
 
-    Context mContext;
-    ActivityCallback mCallBack = null;
-    NotificationManager mNotificationManager;
+    private final Context mContext;
+    private final NotificationManager mNotificationManager;
+    private String mCallingNumber = "";
     /**
-     * A numeric value that identifies the notification that we'll be sending.
-     * This value needs to be unique within this app, but it doesn't need to be
-     * unique system-wide.
+     * NOTIFICATION_ID is a numeric value that identifies the notification that we'll be sending.
+     * This value needs to be unique within this app, but it doesn't need to be unique system-wide.
      */
-    public static final int NOTIFICATION_ID = 1;
+    private static final int NOTIFICATION_ID = 1;
 
-    // declare DisplayNotification that takes in ActivityCallback (i.e. your Activity class object that is also an ActivityCallback).
-    public DisplayNotification(Context mContext, ActivityCallback callBack) {
+    public DisplayNotification(Context mContext, String callingNumber) {
         this.mContext = mContext;
+        this.mCallingNumber = callingNumber;
         mNotificationManager = (NotificationManager)
                 mContext.getSystemService(Context.NOTIFICATION_SERVICE);
-        this.mCallBack=callBack;
     }
 
     @Override
@@ -42,11 +42,10 @@ public class DisplayNotification implements Runnable {
 
         PendingIntent pendingIntent = PendingIntent.getActivity(context,
                 NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
         // http://stackoverflow.com/questions/13717492/notifications-builder-in-api-10
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
-                .setContentTitle("MyOwnNumber")
-                .setContentText(MainActivity.mPhoneNumber)
+                .setContentTitle(context.getString(R.string.MyOwnNumber))
+                .setContentText("\u2709 '" + MainActivity.mPhoneNumber + "' \u27A0  \u260F" + mCallingNumber)  // ? ? ?  (U+2709 U+27A0 U260F)
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(R.drawable.ic_launcher) // .ic_action_picture)
                 .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher))
