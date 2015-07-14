@@ -41,12 +41,13 @@ class DisplayNotification implements Runnable {
         // register MainActivity to handle click on Notification
         Intent intent = new Intent(context, MainActivity.class);
         intent.putExtra("CallingNumber", mCallingNumber);
+        // TODO: check if mCallingNumber is "null" - may happen if caller suppresses number
         PendingIntent pendingIntent = PendingIntent.getActivity(context,
                 NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         // http://stackoverflow.com/questions/13717492/notifications-builder-in-api-10
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
                 .setContentTitle(context.getString(R.string.MyOwnNumber))
-                .setContentText("\u2709 '" + MainActivity.getOwnPhoneNumber(context) + "' \u27A0  \u260F" + mCallingNumber)  // ? ? ?  (U+2709 U+27A0 U260F)
+                .setContentText("\u2709 '" + MainActivity.getOwnPhoneNumber(context) + "' \u27A0  \u260F " + mCallingNumber)  // ? ? ?  (U+2709 U+27A0 U260F)
                 .setContentIntent(pendingIntent)
                 .setSmallIcon(R.drawable.ic_launcher) // .ic_action_picture)
                 .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher))
