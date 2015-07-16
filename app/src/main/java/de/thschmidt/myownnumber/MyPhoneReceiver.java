@@ -52,16 +52,19 @@ public class MyPhoneReceiver extends BroadcastReceiver {
                 }
             }
 
-            // remember previous call state
-            // own call: OFFHOOK > IDLE  (accepted)
-            // own call:                 (not accepted)
-            // call:     RINGING > OFFHOOK > IDLE   (accepted)
-            // call:     RINGING > IDLE             (not accepted)
+            // remember previous call states due to
+            // own call: OFFHOOK > IDLE  (accepted by callee)
+            // own call: OFFHOOK > IDLE  (canceled by callee)
+            // own call: OFFHOOK > IDLE  (canceled by myself)
+            // call:     RINGING > OFFHOOK > IDLE   (accepted by myself)
+            // call:     RINGING > IDLE             (not accepted by myself)
+            // call:     RINGING > OFFHOOK > IDLE   (accepted by myself, number suppressed)
+            // call:     RINGING > IDLE             (not accepted by myself, number suppressed)
 
             else if (state.equals(TelephonyManager.EXTRA_STATE_OFFHOOK)) {
                 if (! previousState.equals(TelephonyManager.EXTRA_STATE_RINGING) ) {
                     // OFFHOOK to signal own call ( = IDLE after OFFHOOK)
-                    // OFFHOOK after RINGING signals call accepted
+                    // OFFHOOK after RINGING signals incoming call accepted
                     previousState = state; // STATE_OFFHOOK
                 }
                 Log.d(TAG, "onReceive(): previousState = " + previousState);
