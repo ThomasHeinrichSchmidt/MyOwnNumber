@@ -45,7 +45,7 @@ class DisplayNotification implements Runnable {
         // TODO: check if mCallingNumber is "null" - may happen if caller suppresses number
         PendingIntent pendingIntent = PendingIntent.getActivity(context,
                 NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        String msg ="\u2709  \u00ab" + MainActivity.getOwnPhoneNumber(context) + "\u00bb  \u27A0  \u260F " + mCallingNumber;   // » letter arrow phone (U+2709 U+27A0 U260F)
+        String msg ="\u2709  \u00ab" + MainActivity.getOwnPhoneNumber(context) + "\u00bb  \u27A0  \u260F " + mCallingNumber;   //  letter arrow phone (U+2709 U+27A0 U260F)
         // http://stackoverflow.com/questions/13717492/notifications-builder-in-api-10
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
                 .setContentTitle(context.getString(R.string.MyOwnNumber))

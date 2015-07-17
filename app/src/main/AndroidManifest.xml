@@ -3,6 +3,10 @@
     package="de.thschmidt.myownnumber">
 
     <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <!-- to show (toast) message with own phone number when receiving or making a call -->
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+    <!-- to display a notification with the option to text/SMS the own number to the callee -->
+
     <!--<uses-permission android:name="android.permission.SEND_SMS"/>-->
 
     <application
@@ -21,8 +25,8 @@
         </activity>
         <receiver android:name=".MyPhoneReceiver" >
             <intent-filter>
-                <action android:name="android.intent.action.PHONE_STATE" >
-                </action>
+                <action android:name="android.intent.action.PHONE_STATE" />
+                <action android:name="android.intent.action.NEW_OUTGOING_CALL" />
             </intent-filter>
         </receiver>
     </application>

@@ -3,6 +3,8 @@ package de.thschmidt.myownnumber;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -226,7 +228,10 @@ public class MainActivity extends ActionBarActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_copy) {
+            Log.d(TAG, "onOptionsItemSelected(" + id + "): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
+            MyClipboardManager clipboard = new MyClipboardManager();
+            clipboard.copyToClipboard(getApplicationContext(), getOwnPhoneNumber(getApplicationContext()));
             return true;
         }
 
