@@ -5,7 +5,7 @@
 package de.thschmidt.myownnumber;
 
 /**
- * Created by --thomas. on 17.07.2015.
+ *   http://stackoverflow.com/questions/19253786/how-to-copy-text-to-clip-board-in-android
  */
 
 import java.io.FileInputStream;
@@ -16,27 +16,27 @@ import java.io.InputStreamReader;
 import android.annotation.SuppressLint;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.net.Uri;
 import android.util.Log;
 
-public class MyClipboardManager {
+
+class MyClipboardManager {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
     @SuppressLint("NewApi")
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "UnusedReturnValue"})
     public boolean copyToClipboard(Context context, String text) {
         try {
             int sdk = android.os.Build.VERSION.SDK_INT;
             if (sdk < android.os.Build.VERSION_CODES.HONEYCOMB) {
-                android.text.ClipboardManager clipboard = (android.text.ClipboardManager) context.getSystemService(context.CLIPBOARD_SERVICE);
+                android.text.ClipboardManager clipboard = (android.text.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                 clipboard.setText(text);
             } else {
-                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(context.CLIPBOARD_SERVICE);
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
                 android.content.ClipData clip = android.content.ClipData.newPlainText(context.getResources().getString(R.string.MyOwnNumber), text);
                 clipboard.setPrimaryClip(clip);
             }
@@ -46,35 +46,39 @@ public class MyClipboardManager {
         }
     }
 
+    @SuppressWarnings("unused")
     @SuppressLint("NewApi")
     public String readFromClipboard(Context context) {
         int sdk = android.os.Build.VERSION.SDK_INT;
         if (sdk < android.os.Build.VERSION_CODES.HONEYCOMB) {
+            //noinspection deprecation
             android.text.ClipboardManager clipboard = (android.text.ClipboardManager) context
-                    .getSystemService(context.CLIPBOARD_SERVICE);
+                    .getSystemService(Context.CLIPBOARD_SERVICE);
             return clipboard.getText().toString();
         } else {
             ClipboardManager clipboard = (ClipboardManager) context
                     .getSystemService(Context.CLIPBOARD_SERVICE);
 
             // Gets a content resolver instance
-            ContentResolver cr = context.getContentResolver();
+            // import android.content.ContentResolver;
+            // ContentResolver cr = context.getContentResolver();
 
             // Gets the clipboard data from the clipboard
             ClipData clip = clipboard.getPrimaryClip();
             if (clip != null) {
 
                 String text = null;
-                String title = null;
+                // String title = null;
 
                 // Gets the first item from the clipboard data
                 ClipData.Item item = clip.getItemAt(0);
 
                 // Tries to get the item's contents as a URI pointing to a note
-                Uri uri = item.getUri();
+                // Uri uri = item.getUri();
 
                 // If the contents of the clipboard wasn't a reference to a note, then
                 // this converts whatever it is to text.
+                //noinspection ConstantConditions
                 if (text == null) {
                     text = coerceToText(context, item).toString();
                 }
@@ -85,7 +89,7 @@ public class MyClipboardManager {
     }
 
     @SuppressLint("NewApi")
-    public CharSequence coerceToText(Context context, ClipData.Item item) {
+    private CharSequence coerceToText(Context context, ClipData.Item item) {
         // If this Item has an explicit textual value, simply return that.
         CharSequence text = item.getText();
         if (text != null) {
@@ -102,9 +106,9 @@ public class MyClipboardManager {
             FileInputStream stream = null;
             try {
                 // Ask for a stream of the desired type.
-                AssetFileDescriptor descr = context.getContentResolver()
+                AssetFileDescriptor descriptor = context.getContentResolver()
                         .openTypedAssetFileDescriptor(uri, "text/*", null);
-                stream = descr.createInputStream();
+                stream = descriptor.createInputStream();
                 InputStreamReader reader = new InputStreamReader(stream,"UTF-8");
 
                 // Got it... copy the stream into a local string and return it.
@@ -128,6 +132,7 @@ public class MyClipboardManager {
                     try {
                         stream.close();
                     } catch (IOException e) {
+                        Log.d(TAG, "CharSequence coerceToText(): not possible to close stream: ", e);
                     }
                 }
             }

@@ -3,8 +3,6 @@ package de.thschmidt.myownnumber;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -23,6 +21,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -49,19 +48,19 @@ public class MainActivity extends ActionBarActivity {
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             Log.d(TAG, "onCreate(): found extras!");
-            String mCallingNumber = getString(R.string.UnknownPhoneNumber);
+            String mCallingNumber;
             if (android.os.Build.VERSION.SDK_INT < 21) {
-                mCallingNumber = "";
                 mCallingNumber = (String) extras.get("CallingNumber");
             }
             else {
                 mCallingNumber = extras.getString("CallingNumber", "");
             }
-            if (!mCallingNumber.equals("")) {
+            if (mCallingNumber != null && !mCallingNumber.equals("")) {
                 Log.d(TAG, "onCreate(): found calling number = " + mCallingNumber);
                 Log.d(TAG, "onCreate(): now text/SMS " + getOwnPhoneNumber(getApplicationContext()) + " to " + mCallingNumber);
                 //End if
                 final boolean sendSMS = false;
+                //noinspection ConstantConditions
                 if (sendSMS) {
                     // needs <uses-permission android:name="android.permission.SEND_SMS"/> in AndroidManifest
                     SmsManager sms = SmsManager.getDefault();
@@ -124,6 +123,7 @@ public class MainActivity extends ActionBarActivity {
             if ((null != ownPhoneNumber) && (ownPhoneNumber.length() > 2)) {
                 // ownPhoneNumber = ownPhoneNumber.substring(2);
                 if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {  // LOLLIPOP = 21
+                    //noinspection deprecation
                     setOwnPhoneNumber(PhoneNumberUtils.formatNumber(ownPhoneNumber));
                 } else {
                     String formattedNumber = PhoneNumberUtils.formatNumber(ownPhoneNumber, getUserCountry(context.getApplicationContext()));
@@ -173,10 +173,11 @@ public class MainActivity extends ActionBarActivity {
     }
 
     // http://stackoverflow.com/questions/20079047/android-kitkat-4-4-hangouts-cannot-handle-sending-sms-intent
+    @SuppressWarnings("unused")
     public static boolean sendSms(Context context, String text, String number) {
         return sendSms(context, text, Collections.singletonList(number));
     }
-    public static boolean sendSms(Context context, String text, List<String> numbers) {
+    private static boolean sendSms(Context context, String text, List<String> numbers) {
 
         String numbersStr = TextUtils.join(",", numbers);
 
@@ -208,7 +209,8 @@ public class MainActivity extends ActionBarActivity {
         return true;
     }
 
-    public static void cancelNotification(Context context, int notifyId) {
+    @SuppressWarnings("SameParameterValue")
+    private static void cancelNotification(Context context, int notifyId) {
         String notificationService = Context.NOTIFICATION_SERVICE;
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(notificationService);
         notificationManager.cancel(notifyId);

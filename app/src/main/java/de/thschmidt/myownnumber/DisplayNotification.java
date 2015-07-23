@@ -52,7 +52,7 @@ class DisplayNotification implements Runnable {
                 // .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))  // needed? does not seem to make a difference   http://stackoverflow.com/questions/28387602/notification-bar-icon-turns-white-in-android-5-lollipop
                 .setContentText(msg)
                 .setContentIntent(pendingIntent)
-                .setColor(Color.rgb(132,165,39))  // SMS green
+                .setColor(Color.rgb(132,165,39))  // SMS green, #84a527 (https://www.colorcodehex.com/84a527/)
                 .setSmallIcon(getNotificationIcon())
                 .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher))
                 ;
@@ -61,6 +61,7 @@ class DisplayNotification implements Runnable {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             n = builder.build();
         } else {
+            //noinspection deprecation
             n = builder.getNotification();
         }
         mNotificationManager.notify(NOTIFICATION_ID, n);

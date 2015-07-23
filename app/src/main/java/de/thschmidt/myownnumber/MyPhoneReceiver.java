@@ -92,7 +92,7 @@ public class MyPhoneReceiver extends BroadcastReceiver {
     }
 
     private void toastOwnNumberToImproveUserMemory(Context context) {
-        Context appContext = context.getApplicationContext();
+        // Context appContext = context.getApplicationContext();
         // Log.d(TAG, "onReceive(): getting context " + appContext.toString());
         // Log.d(TAG, "onReceive(): MainActivity.ownPhoneNumber is '" + MainActivity.getOwnPhoneNumber(context) + "'");
         String info = "My Own Number\n\u260F" + MainActivity.getOwnPhoneNumber(context); // white telephone
