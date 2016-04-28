@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,6 +34,14 @@ public class MainActivity extends ActionBarActivity {
 
     private static String ownPhoneNumber = "";
     private static final String TAG = MainActivity.class.getSimpleName();
+    private static boolean suggestSendingSMStoCallee;
+
+    public static boolean isSuggestSendingSMStoCallee() {
+        return suggestSendingSMStoCallee;
+    }
+    public static void setSuggestSendingSMStoCallee(boolean suggestSendingSMStoCallee) {
+        MainActivity.suggestSendingSMStoCallee = suggestSendingSMStoCallee;
+    }
 
     // TODO: conditionally remove LOG.d() in release build by using private static final boolean Debug
 
@@ -59,9 +68,9 @@ public class MainActivity extends ActionBarActivity {
                 Log.d(TAG, "onCreate(): found calling number = " + mCallingNumber);
                 Log.d(TAG, "onCreate(): now text/SMS " + getOwnPhoneNumber(getApplicationContext()) + " to " + mCallingNumber);
                 //End if
-                final boolean sendSMS = false;
+                final boolean sendSMSautomatically = false;
                 //noinspection ConstantConditions
-                if (sendSMS) {
+                if (sendSMSautomatically) {
                     // needs <uses-permission android:name="android.permission.SEND_SMS"/> in AndroidManifest
                     SmsManager sms = SmsManager.getDefault();
                     PendingIntent sentIntent = null;
@@ -70,7 +79,8 @@ public class MainActivity extends ActionBarActivity {
                     String info = "\u2709 '" + getOwnPhoneNumber(getApplicationContext()) + "' \u27A0  \u260F" + mCallingNumber;  // ? ? ?  (U+2709 U+27A0 U260F)
                     Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
                 }
-                else {
+                else if (isSuggestSendingSMStoCallee()) {
+                    Log.d(TAG, "onCreate(): text/SMS suggested due to menu setting suggestSendingSMStoCallee = " + isSuggestSendingSMStoCallee());
                     Intent smsIntent = new Intent(Intent.ACTION_VIEW);
                     smsIntent.setType("vnd.android-dir/mms-sms");
                     smsIntent.putExtra("address", mCallingNumber);
@@ -87,6 +97,9 @@ public class MainActivity extends ActionBarActivity {
                         If you didn't have issues with your prior method I would probably just stick to that pre-4.4 and use ACTION_SENDTO for 4.4+.
                         http://stackoverflow.com/questions/19853220/android4-4-can-not-handle-sms-intent-with-vnd-android-dir-mms-sms
                     */
+                }
+                else {
+                    Log.d(TAG, "onCreate(): did not text/SMS due to menu setting suggestSendingSMStoCallee" + isSuggestSendingSMStoCallee());
                 }
                 Log.d(TAG, "onCreate(): cancel Notification " + DisplayNotification.NOTIFICATION_ID);
                 cancelNotification(getApplicationContext(), DisplayNotification.NOTIFICATION_ID);
@@ -112,8 +125,29 @@ public class MainActivity extends ActionBarActivity {
                 Log.d(TAG, "addTextChangedListener(): enter onTextChanged()");
             }
         });
+
+        // Re-Store preferences
+        SharedPreferences settings = getPreferences(MODE_PRIVATE);
+        setSuggestSendingSMStoCallee(settings.getBoolean("suggestSendingSMStoCallee", true));
+        Log.d(TAG, "set suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
+
+
         Log.d(TAG, "onCreate(): leave");
     }
+
+    @Override
+    protected void onStop(){
+        super.onStop();
+        // We need an Editor object to make preference changes.
+        // All objects are from android.context.Context
+        SharedPreferences settings = getPreferences(MODE_PRIVATE);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putBoolean("suggestSendingSMStoCallee", isSuggestSendingSMStoCallee());
+        // Commit the edits!
+        editor.commit();
+        Log.d(TAG, "onStop(): commit changes to suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
+    }
+
 
     public static String getOwnPhoneNumber(Context context) {
         if (ownPhoneNumber.equals("")) {
@@ -219,6 +253,11 @@ public class MainActivity extends ActionBarActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        // set suggest Sending SMS to Callee from SharedPreferences
+        MenuItem sms = menu.findItem(R.id.action_suggestSendingSMStoCallee);
+        if (sms != null && sms.isCheckable()) {
+            sms.setChecked(isSuggestSendingSMStoCallee());
+        }
         return true;
     }
 
@@ -229,15 +268,25 @@ public class MainActivity extends ActionBarActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_copy) {
-            Log.d(TAG, "onOptionsItemSelected(" + id + "): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
-            MyClipboardManager clipboard = new MyClipboardManager();
-            clipboard.copyToClipboard(getApplicationContext(), getOwnPhoneNumber(getApplicationContext()));
-            return true;
+        switch (item.getItemId()) {
+            case  R.id.action_copy:
+                Log.d(TAG, "onOptionsItemSelected(" + id + "): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
+                MyClipboardManager clipboard = new MyClipboardManager();
+                clipboard.copyToClipboard(getApplicationContext(), getOwnPhoneNumber(getApplicationContext()));
+                return true;
+            case R.id.action_suggestSendingSMStoCallee:
+                if (item.isChecked()) {
+                    setSuggestSendingSMStoCallee(false);  // erase pending notification
+                    cancelNotification(getApplicationContext(), DisplayNotification.NOTIFICATION_ID);
+                }
+                else {
+                    setSuggestSendingSMStoCallee(true);
+                }
+                item.setChecked(isSuggestSendingSMStoCallee());
+                Log.d(TAG, "onOptionsItemSelected(" + id + "): suggestSendingSMStoCallee := '" + isSuggestSendingSMStoCallee() + "'");
+            default:
+                return super.onOptionsItemSelected(item);
         }
-
-        return super.onOptionsItemSelected(item);
     }
 }
 
