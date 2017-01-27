@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Telephony;
+import android.support.annotation.NonNull;
 import android.support.v7.app.ActionBarActivity;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SmsManager;
@@ -26,6 +27,7 @@ import android.widget.Toast;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.*;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -177,7 +179,61 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private static void setOwnPhoneNumber(String ownPhoneNumber) {
+        // TODO: group number to enhance memorization (equal digits, inc/dec digits) - remove *31# or (better) use number starting from + or 00 or 0
+        Pattern p = Pattern.compile("\\+?[- 0-9]{3,}$");  // rightmost string of at least 3 digits or blanks optionally preceded by a +
+        Matcher m = p.matcher(ownPhoneNumber);
+        if (m.find()) {
+            try {
+                ownPhoneNumber = m.group();
+            }
+            catch (Exception e) { }
+        }
+        ownPhoneNumber = getMemoPhoneNumber(ownPhoneNumber);
         MainActivity.ownPhoneNumber = ownPhoneNumber;
+    }
+
+    @NonNull
+    public static String getMemoPhoneNumber(String ownPhoneNumber) {
+        String memoPhoneNumber = "";
+        int equalDigitCount = 0;
+        int incrementDigitCount = 0;
+        int decrementDigitCount = 0;
+        int minimalRunCount = 3;
+        char lastc = ownPhoneNumber.charAt(0);
+        memoPhoneNumber += lastc;
+        for (int i = 1; i < ownPhoneNumber.length(); i++){
+            char c = ownPhoneNumber.charAt(i);
+            memoPhoneNumber += c;
+            if (lastc == c) {
+                equalDigitCount++;
+            }
+            else {
+                if (equalDigitCount >= minimalRunCount) {
+                    memoPhoneNumber += " ";
+                }
+                equalDigitCount = 0;
+            }
+            if (1 + (int) lastc == (int) c) {
+                incrementDigitCount++;
+            }
+            else {
+                if (incrementDigitCount >= minimalRunCount) {
+                    memoPhoneNumber += " ";
+                }
+                incrementDigitCount = 0;
+            }
+            if (-1 + (int) lastc == (int) c ) {
+                decrementDigitCount++;
+            }
+            else {
+                if (decrementDigitCount >= minimalRunCount) {
+                    memoPhoneNumber += " ";
+                }
+                decrementDigitCount = 0;
+            }
+        }
+        ownPhoneNumber = memoPhoneNumber;
+        return ownPhoneNumber;
     }
 
     /**

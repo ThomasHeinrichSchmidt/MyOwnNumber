@@ -2,11 +2,11 @@
 <project version="4">
   <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false">
     <file url="file://$PROJECT_DIR$/app/build.gradle" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/app/src/androidTest/java/de/thschmidt/myownnumber/ApplicationTest.java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/de/thschmidt/myownnumber/DisplayNotification.java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/de/thschmidt/myownnumber/MainActivity.java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/de/thschmidt/myownnumber/MyClipboardManager.java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/app/src/main/java/de/thschmidt/myownnumber/MyPhoneReceiver.java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/app/src/test/java/de/thschmidt/myownnumber/test/MainActivityUnitTest.java" charset="UTF-8" />
     <file url="PROJECT" charset="UTF-8" />
   </component>
 </project>
