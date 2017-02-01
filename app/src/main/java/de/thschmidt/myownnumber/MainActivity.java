@@ -253,41 +253,63 @@ public class MainActivity extends ActionBarActivity {
         return ownPhoneNumber;
     }
 
-    enum Symbol { NONE, EQUAL, LESS, GREATER, JUMP }
-    enum State { START, STARTOFRUN, REPEATING, DESCENDING, ASCENDING, ENDOFRUN, JUMPING, FINAL }
+
+    /*  FSM - state transition diagram
+                      +---+
+                      |   |
+                      |   | FIT
+                      v   |               FIT
+                   +------+ <---------------------+------+
+           FIT     |      |                       |      |
+       +---------->+  REP +---------------------->+ ENDR |
+       |           |      |        NON            |      |
+       |           +-----++                       +--+---+
+       |                 ^                        |  ^
+       |                 |         NON            |  |
+    +--+               +--------------------------+  |
+    |S |               | |                           | NON
+    +--+               | +------------------------+  |
+       |               v          FIT             |  |
+       |           +------+                       +--+---+
+       |           |      |                       |      |
+       +---------->+ JUMP +---------------------->+STARTR|
+           NON     |      |       FIT             |      |
+                   +--+---+                       +------+
+                      ^   |
+                      |   |
+                      |   | NON
+                      +---+
+    */
+    enum Symbol { NONE, FIT, NONFIT, EQUAL, LESS, GREATER, JUMP }
+    enum State { START, STARTOFRUN, REPEATING, ENDOFRUN, JUMPING, FINISHING, FINAL }
     static State transition[][] = {
-            //  NONE         EQUAL            LESS              GREATER          JUMP
+           //  NONE        FIT             NONFIT
     {
     // START
-            State.FINAL,  State.REPEATING, State.DESCENDING, State.ASCENDING, State.JUMPING
+           State.FINAL, State.REPEATING, State.JUMPING
     }, {
     // STARTOFRUN
-            State.FINAL,  State.REPEATING, State.DESCENDING, State.ASCENDING, State.JUMPING
+           State.FINAL, State.REPEATING, State.ENDOFRUN
     }, {
     // REPEATING
-           State.FINAL, State.REPEATING, State.ENDOFRUN, State.ENDOFRUN, State.JUMPING
-    }, {
-    // DESCENDING
-            State.FINAL, State.ENDOFRUN, State.DESCENDING, State.ENDOFRUN, State.JUMPING
-    }, {
-    // ASCENDING
-            State.FINAL, State.ENDOFRUN, State.ENDOFRUN, State.ASCENDING, State.JUMPING
+           State.ENDOFRUN, State.REPEATING, State.ENDOFRUN
     }, {
     // ENDOFRUN
-            State.FINAL,  State.REPEATING, State.DESCENDING, State.ASCENDING, State.JUMPING
+           State.FINAL, State.REPEATING, State.JUMPING
     }, {
     // JUMPING
-            State.FINAL,  State.STARTOFRUN, State.STARTOFRUN, State.STARTOFRUN, State.JUMPING
+           State.FINISHING, State.STARTOFRUN, State.JUMPING
     }, {
     // FINAL
-           State.FINAL, State.FINAL, State.FINAL, State.FINAL, State.FINAL
+           State.FINAL, State.FINAL, State.FINAL
     }
     };
 
 
     private static int index = 0;
-    private static char c = 0, lastc = 0;
+    private static char c = 0, nextc = 0;
     private static final int  minimalRunCount = 3;
+    private static Symbol kindOfFIT = Symbol.NONE;
 
     @NonNull
     public static String getMemoPhoneNumber(String ownPhoneNumber) {
@@ -297,44 +319,53 @@ public class MainActivity extends ActionBarActivity {
         if (ownPhoneNumber.length() < 3) return ownPhoneNumber;
 
         String memoPhoneNumber = "";
-        Symbol symbol = Symbol.NONE;
+        Symbol symbol;
         State state = State.START;
         StringBuilder buffer = new StringBuilder ();
-        int e  = 0, d = 0, a = 0;
-        index = 0; c = 0; lastc = 0;
+        index = 0; nextc = 0; c = 0;
 
         while (state != State.FINAL) {
+            symbol = nextSymbol(ownPhoneNumber);
             switch(state) {
                 case START:
                     // Log.d(TAG, "getMemoPhoneNumber: START ");
-                    break;
-                case STARTOFRUN:
-                    // push back last char from result
-                    buffer.append(memoPhoneNumber.charAt(memoPhoneNumber.length()-1));
-                    memoPhoneNumber = memoPhoneNumber.substring(0,memoPhoneNumber.length()-2);
+                    symbol = setKindOfFITfrom(symbol);
                     break;
                 case REPEATING:
-                    e = buffer.length();
-                    break;
-                case DESCENDING:
-                    d = buffer.length();
-                    break;
-                case ASCENDING:
-                    a = buffer.length();
-                    break;
-                case ENDOFRUN:
-                    //
-                    memoPhoneNumber += buffer.charAt(0);
-                    buffer.deleteCharAt(0);
+                    symbol = getFITorNONFITfromKindOfFIT(symbol);
                     break;
                 case JUMPING:
-                    if (e >= minimalRunCount || d >= minimalRunCount || a >= minimalRunCount) {
+                    symbol = setKindOfFITfrom(symbol);
+                    break;
+                case STARTOFRUN:
+                    // flush buffer, keep last char for new run
+                    memoPhoneNumber += buffer.substring(0,buffer.length()-1);
+                    char cc = buffer.charAt(buffer.length()-1);
+                    buffer.setLength(0);
+                    buffer.append(cc);
+                    symbol = getFITorNONFITfromKindOfFIT(symbol);
+                    break;
+                case ENDOFRUN:
+                    symbol = setKindOfFITfrom(symbol);
+                    // flush buffer, possibly format result
+                    if (buffer.length() >= minimalRunCount) {
                         memoPhoneNumber += " " + buffer + " ";
+                        buffer.setLength(0);
                     }
                     else {
                         memoPhoneNumber += buffer;
+                        buffer.setLength(0);
+                        if (symbol == Symbol.FIT) {
+                            // recover first char of new run
+                            cc = memoPhoneNumber.charAt(memoPhoneNumber.length()-1);
+                            memoPhoneNumber = memoPhoneNumber.substring(0, memoPhoneNumber.length()-1);
+                            buffer.append(cc);
+                        }
                     }
-                    e = d = a = 0;
+                    break;
+                case FINISHING:
+                    // get remaining numbers from buffer
+                    memoPhoneNumber += buffer;
                     buffer.setLength(0);
                     break;
                 case FINAL:
@@ -345,33 +376,59 @@ public class MainActivity extends ActionBarActivity {
                     if (BuildConfig.DEBUG) throw new AssertionError("getMemoPhoneNumber() 'default:' can never happen ");
                     break;
             }
-            symbol = nextSymbol(ownPhoneNumber, buffer);
+            if (BuildConfig.DEBUG && (symbol != Symbol.NONE && symbol != Symbol.FIT && symbol != Symbol.NONFIT)) throw new AssertionError("getMemoPhoneNumber() 'symbol must be NONE, FIT, or NONFIT.");
+            buffer.append(c);
             state = transition[state.ordinal()][symbol.ordinal()];
+            if (index > ownPhoneNumber.length() + 2) {  // emergency exit
+                state = State.FINAL;
+                memoPhoneNumber = ownPhoneNumber;
+                buffer.setLength(0);
+            }
         }
-        // get remaining numbers from buffer
-        memoPhoneNumber += buffer;
         // trim space: left, right, and multiple
         return memoPhoneNumber.trim().replaceAll(" +", " ");
     }
 
-    private static Symbol nextSymbol(String ownPhoneNumber, StringBuilder buffer) {
+    @NonNull
+    private static Symbol getFITorNONFITfromKindOfFIT(Symbol symbol) {
+        if (symbol == Symbol.NONE) {
+            kindOfFIT = Symbol.NONE;
+            return symbol;
+        }
+        if (kindOfFIT == symbol) symbol = Symbol.FIT;
+        else if (symbol != Symbol.NONE) symbol = Symbol.NONFIT;
+        if (BuildConfig.DEBUG && (symbol != Symbol.NONE && symbol != Symbol.FIT && symbol != Symbol.NONFIT)) throw new AssertionError("getFITorNONFITfromKindOfFIT() 'symbol must be NONE, FIT, or NONFIT.");
+        return symbol;
+    }
+
+    private static Symbol setKindOfFITfrom(Symbol symbol) {
+        if (symbol == Symbol.EQUAL || symbol == Symbol.LESS || symbol == Symbol.GREATER) { kindOfFIT = symbol; symbol = Symbol.FIT; }
+        if (symbol == Symbol.JUMP) symbol = Symbol.NONFIT;
+        if (symbol == Symbol.NONFIT || symbol == Symbol.NONE) kindOfFIT = Symbol.NONE;
+        if (BuildConfig.DEBUG && (symbol != Symbol.NONE && symbol != Symbol.FIT && symbol != Symbol.NONFIT)) throw new AssertionError("setKindOfFITfrom() 'symbol must be NONE, FIT, or NONFIT.");
+        if (BuildConfig.DEBUG && (kindOfFIT != Symbol.NONE && kindOfFIT != Symbol.EQUAL && kindOfFIT != Symbol.LESS && kindOfFIT != Symbol.GREATER)) throw new AssertionError("setKindOfFITfrom() 'kindOfFIT must be NONE, EQUAL, LESS, or GREATER.");
+        return symbol;
+    }
+
+    private static Symbol nextSymbol(String ownPhoneNumber) {
+        // TODO: pass class variables like c, nextc, ... per referenced class
         if (BuildConfig.DEBUG && ownPhoneNumber.length() < 3) throw new AssertionError("ownPhoneNumber is too short");
         Symbol symbol;
-        if (lastc == 0) {
-            c = ownPhoneNumber.charAt(index++);
-            buffer.append(c);
+        if (c == 0) {
+            nextc = ownPhoneNumber.charAt(index++);
         }
-        lastc = c;
         if (ownPhoneNumber.length() > index) {
-            c = ownPhoneNumber.charAt(index++);
-            buffer.append(c);
+            c = nextc;
+            nextc = ownPhoneNumber.charAt(index++);
         } else {
+            c = nextc;
+            index++;
             symbol = Symbol.NONE;
             return symbol;
         }
-        if (lastc == c) symbol = Symbol.EQUAL;
-        else if (+1 + (int) lastc == (int) c) symbol = Symbol.GREATER;
-        else if (-1 + (int) lastc == (int) c) symbol = Symbol.LESS;
+        if (c == nextc) symbol = Symbol.EQUAL;
+        else if (+1 + (int) c == (int) nextc) symbol = Symbol.GREATER;
+        else if (-1 + (int) c == (int) nextc) symbol = Symbol.LESS;
         else symbol = Symbol.JUMP;
         return symbol;
     }
