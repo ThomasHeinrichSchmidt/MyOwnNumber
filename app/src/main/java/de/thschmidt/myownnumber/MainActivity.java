@@ -35,7 +35,7 @@ public class MainActivity extends ActionBarActivity {
     // http://stackoverflow.com/questions/17371470/changing-ic-launcher-png-in-android-studio
 
     private static String ownPhoneNumber = "";
-    private static final String TAG = MainActivity.class.getSimpleName();
+    private static String TAG = MainActivity.class.getSimpleName();
     private static boolean suggestSendingSMStoCallee;
 
     public static boolean isSuggestSendingSMStoCallee() {
@@ -49,6 +49,7 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        TAG = this.toString();
         Log.d(TAG, "onCreate(): enter");
         Log.d(TAG, "onCreate(): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
         super.onCreate(savedInstanceState);
@@ -139,6 +140,7 @@ public class MainActivity extends ActionBarActivity {
 
     @Override
     protected void onStop(){
+        TAG = this.toString();
         super.onStop();
         // We need an Editor object to make preference changes.
         // All objects are from android.context.Context
@@ -179,7 +181,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private static void setOwnPhoneNumber(String ownPhoneNumber) {
-        // TODO: group number to enhance memorization (equal digits, inc/dec digits) - remove *31# or (better) use number starting from + or 00 or 0
+        // remove *31# or (better) use number starting from + or 00 or 0
         Pattern p = Pattern.compile("\\+?[- 0-9]{3,}$");  // rightmost string of at least 3 digits or blanks optionally preceded by a +
         Matcher m = p.matcher(ownPhoneNumber);
         if (m.find()) {
@@ -193,48 +195,187 @@ public class MainActivity extends ActionBarActivity {
     }
 
     @NonNull
-    public static String getMemoPhoneNumber(String ownPhoneNumber) {
+    public static String getMemoPhoneNumber1(String ownPhoneNumber) {
+        // group number to enhance memorization (equal digits, inc/dec digits)
         String memoPhoneNumber = "";
         int equalDigitCount = 0;
         int incrementDigitCount = 0;
         int decrementDigitCount = 0;
         int minimalRunCount = 3;
+        int startOfRun = 0;
+        boolean runOver = false;
         char lastc = ownPhoneNumber.charAt(0);
         memoPhoneNumber += lastc;
         for (int i = 1; i < ownPhoneNumber.length(); i++){
             char c = ownPhoneNumber.charAt(i);
-            memoPhoneNumber += c;
             if (lastc == c) {
+                if (equalDigitCount == 0) startOfRun = 0;
                 equalDigitCount++;
-            }
-            else {
-                if (equalDigitCount >= minimalRunCount) {
-                    memoPhoneNumber += " ";
-                }
-                equalDigitCount = 0;
-            }
-            if (1 + (int) lastc == (int) c) {
-                incrementDigitCount++;
-            }
-            else {
-                if (incrementDigitCount >= minimalRunCount) {
-                    memoPhoneNumber += " ";
-                }
                 incrementDigitCount = 0;
-            }
-            if (-1 + (int) lastc == (int) c ) {
-                decrementDigitCount++;
-            }
-            else {
-                if (decrementDigitCount >= minimalRunCount) {
-                    memoPhoneNumber += " ";
-                }
                 decrementDigitCount = 0;
             }
+            if (1 + (int) lastc == (int) c) {
+                if (incrementDigitCount == 0) startOfRun = 0;
+                incrementDigitCount++;
+                equalDigitCount = 0;
+                decrementDigitCount = 0;
+            }
+            if (-1 + (int) lastc == (int) c ) {
+                if (decrementDigitCount == 0) startOfRun = 0;
+                decrementDigitCount++;
+                equalDigitCount = 0;
+                incrementDigitCount = 0;
+            }
+            if (equalDigitCount > 0 || incrementDigitCount > 0 || decrementDigitCount > 0) {
+                if (startOfRun == 0) startOfRun = memoPhoneNumber.length() - 1;
+                runOver = false;
+            }
+            else {
+                if (equalDigitCount >= minimalRunCount || incrementDigitCount >= minimalRunCount || decrementDigitCount >= minimalRunCount) {
+                    if (i < ownPhoneNumber.length() -1) memoPhoneNumber += " ";
+                    if (memoPhoneNumber.charAt(startOfRun-1) != ' ') memoPhoneNumber = memoPhoneNumber.substring(0, startOfRun) + " " + memoPhoneNumber.substring(startOfRun, memoPhoneNumber.length());
+                }
+                runOver = true;
+            }
+            if (runOver) {
+                equalDigitCount = 0;
+                incrementDigitCount = 0;
+                decrementDigitCount = 0;
+                startOfRun = 0;
+            }
+            memoPhoneNumber += c;
+            lastc = c;
+        }
+        if (equalDigitCount >= minimalRunCount || incrementDigitCount >= minimalRunCount || decrementDigitCount >= minimalRunCount) {
+            if (memoPhoneNumber.charAt(startOfRun-1) != ' ') memoPhoneNumber = memoPhoneNumber.substring(0, startOfRun) + " " + memoPhoneNumber.substring(startOfRun, memoPhoneNumber.length());
         }
         ownPhoneNumber = memoPhoneNumber;
         return ownPhoneNumber;
     }
+
+    enum Symbol { NONE, EQUAL, LESS, GREATER, JUMP }
+    enum State { START, STARTOFRUN, REPEATING, DESCENDING, ASCENDING, ENDOFRUN, JUMPING, FINAL }
+    static State transition[][] = {
+            //  NONE         EQUAL            LESS              GREATER          JUMP
+    {
+    // START
+            State.FINAL,  State.REPEATING, State.DESCENDING, State.ASCENDING, State.JUMPING
+    }, {
+    // STARTOFRUN
+            State.FINAL,  State.REPEATING, State.DESCENDING, State.ASCENDING, State.JUMPING
+    }, {
+    // REPEATING
+           State.FINAL, State.REPEATING, State.ENDOFRUN, State.ENDOFRUN, State.JUMPING
+    }, {
+    // DESCENDING
+            State.FINAL, State.ENDOFRUN, State.DESCENDING, State.ENDOFRUN, State.JUMPING
+    }, {
+    // ASCENDING
+            State.FINAL, State.ENDOFRUN, State.ENDOFRUN, State.ASCENDING, State.JUMPING
+    }, {
+    // ENDOFRUN
+            State.FINAL,  State.REPEATING, State.DESCENDING, State.ASCENDING, State.JUMPING
+    }, {
+    // JUMPING
+            State.FINAL,  State.STARTOFRUN, State.STARTOFRUN, State.STARTOFRUN, State.JUMPING
+    }, {
+    // FINAL
+           State.FINAL, State.FINAL, State.FINAL, State.FINAL, State.FINAL
+    }
+    };
+
+
+    private static int index = 0;
+    private static char c = 0, lastc = 0;
+    private static final int  minimalRunCount = 3;
+
+    @NonNull
+    public static String getMemoPhoneNumber(String ownPhoneNumber) {
+        // group number to enhance memorization (equal digits, inc/dec digits)
+        TAG = "static";
+        if (ownPhoneNumber == null) return ownPhoneNumber;
+        if (ownPhoneNumber.length() < 3) return ownPhoneNumber;
+
+        String memoPhoneNumber = "";
+        Symbol symbol = Symbol.NONE;
+        State state = State.START;
+        StringBuilder buffer = new StringBuilder ();
+        int e  = 0, d = 0, a = 0;
+        index = 0; c = 0; lastc = 0;
+
+        while (state != State.FINAL) {
+            switch(state) {
+                case START:
+                    // Log.d(TAG, "getMemoPhoneNumber: START ");
+                    break;
+                case STARTOFRUN:
+                    // push back last char from result
+                    buffer.append(memoPhoneNumber.charAt(memoPhoneNumber.length()-1));
+                    memoPhoneNumber = memoPhoneNumber.substring(0,memoPhoneNumber.length()-2);
+                    break;
+                case REPEATING:
+                    e = buffer.length();
+                    break;
+                case DESCENDING:
+                    d = buffer.length();
+                    break;
+                case ASCENDING:
+                    a = buffer.length();
+                    break;
+                case ENDOFRUN:
+                    //
+                    memoPhoneNumber += buffer.charAt(0);
+                    buffer.deleteCharAt(0);
+                    break;
+                case JUMPING:
+                    if (e >= minimalRunCount || d >= minimalRunCount || a >= minimalRunCount) {
+                        memoPhoneNumber += " " + buffer + " ";
+                    }
+                    else {
+                        memoPhoneNumber += buffer;
+                    }
+                    e = d = a = 0;
+                    buffer.setLength(0);
+                    break;
+                case FINAL:
+                    // done
+                    if (BuildConfig.DEBUG) throw new AssertionError("getMemoPhoneNumber() 'FINAL:' can never happen ");
+                    break;
+                default:
+                    if (BuildConfig.DEBUG) throw new AssertionError("getMemoPhoneNumber() 'default:' can never happen ");
+                    break;
+            }
+            symbol = nextSymbol(ownPhoneNumber, buffer);
+            state = transition[state.ordinal()][symbol.ordinal()];
+        }
+        // get remaining numbers from buffer
+        memoPhoneNumber += buffer;
+        // trim space: left, right, and multiple
+        return memoPhoneNumber.trim().replaceAll(" +", " ");
+    }
+
+    private static Symbol nextSymbol(String ownPhoneNumber, StringBuilder buffer) {
+        if (BuildConfig.DEBUG && ownPhoneNumber.length() < 3) throw new AssertionError("ownPhoneNumber is too short");
+        Symbol symbol;
+        if (lastc == 0) {
+            c = ownPhoneNumber.charAt(index++);
+            buffer.append(c);
+        }
+        lastc = c;
+        if (ownPhoneNumber.length() > index) {
+            c = ownPhoneNumber.charAt(index++);
+            buffer.append(c);
+        } else {
+            symbol = Symbol.NONE;
+            return symbol;
+        }
+        if (lastc == c) symbol = Symbol.EQUAL;
+        else if (+1 + (int) lastc == (int) c) symbol = Symbol.GREATER;
+        else if (-1 + (int) lastc == (int) c) symbol = Symbol.LESS;
+        else symbol = Symbol.JUMP;
+        return symbol;
+    }
+
 
     /**
      * http://stackoverflow.com/questions/3659809/where-am-i-get-country
@@ -243,6 +384,7 @@ public class MainActivity extends ActionBarActivity {
      * @return country code or null
      */
     private static String getUserCountry(Context context) {
+        TAG = "static";
         try {
             final TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
             final String simCountry = tm.getSimCountryIso();
@@ -323,6 +465,7 @@ public class MainActivity extends ActionBarActivity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
+        TAG = this.toString();
 
         switch (item.getItemId()) {
             case  R.id.action_copy:
