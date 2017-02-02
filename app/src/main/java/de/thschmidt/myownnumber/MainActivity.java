@@ -23,11 +23,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.*;
+import static java.lang.Integer.signum;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -195,244 +195,59 @@ public class MainActivity extends ActionBarActivity {
     }
 
     @NonNull
-    public static String getMemoPhoneNumber1(String ownPhoneNumber) {
-        // group number to enhance memorization (equal digits, inc/dec digits)
-        String memoPhoneNumber = "";
-        int equalDigitCount = 0;
-        int incrementDigitCount = 0;
-        int decrementDigitCount = 0;
-        int minimalRunCount = 3;
-        int startOfRun = 0;
-        boolean runOver = false;
-        char lastc = ownPhoneNumber.charAt(0);
-        memoPhoneNumber += lastc;
-        for (int i = 1; i < ownPhoneNumber.length(); i++){
-            char c = ownPhoneNumber.charAt(i);
-            if (lastc == c) {
-                if (equalDigitCount == 0) startOfRun = 0;
-                equalDigitCount++;
-                incrementDigitCount = 0;
-                decrementDigitCount = 0;
-            }
-            if (1 + (int) lastc == (int) c) {
-                if (incrementDigitCount == 0) startOfRun = 0;
-                incrementDigitCount++;
-                equalDigitCount = 0;
-                decrementDigitCount = 0;
-            }
-            if (-1 + (int) lastc == (int) c ) {
-                if (decrementDigitCount == 0) startOfRun = 0;
-                decrementDigitCount++;
-                equalDigitCount = 0;
-                incrementDigitCount = 0;
-            }
-            if (equalDigitCount > 0 || incrementDigitCount > 0 || decrementDigitCount > 0) {
-                if (startOfRun == 0) startOfRun = memoPhoneNumber.length() - 1;
-                runOver = false;
-            }
-            else {
-                if (equalDigitCount >= minimalRunCount || incrementDigitCount >= minimalRunCount || decrementDigitCount >= minimalRunCount) {
-                    if (i < ownPhoneNumber.length() -1) memoPhoneNumber += " ";
-                    if (memoPhoneNumber.charAt(startOfRun-1) != ' ') memoPhoneNumber = memoPhoneNumber.substring(0, startOfRun) + " " + memoPhoneNumber.substring(startOfRun, memoPhoneNumber.length());
-                }
-                runOver = true;
-            }
-            if (runOver) {
-                equalDigitCount = 0;
-                incrementDigitCount = 0;
-                decrementDigitCount = 0;
-                startOfRun = 0;
-            }
-            memoPhoneNumber += c;
-            lastc = c;
-        }
-        if (equalDigitCount >= minimalRunCount || incrementDigitCount >= minimalRunCount || decrementDigitCount >= minimalRunCount) {
-            if (memoPhoneNumber.charAt(startOfRun-1) != ' ') memoPhoneNumber = memoPhoneNumber.substring(0, startOfRun) + " " + memoPhoneNumber.substring(startOfRun, memoPhoneNumber.length());
-        }
-        ownPhoneNumber = memoPhoneNumber;
-        return ownPhoneNumber;
-    }
-
-
-    /*  FSM - state transition diagram
-                      +---+
-                      |   |
-                      |   | FIT
-                      v   |               FIT
-                   +------+ <---------------------+------+
-           FIT     |      |                       |      |
-       +---------->+  REP +---------------------->+ ENDR |
-       |           |      |        NON            |      |
-       |           +-----++                       +--+---+
-       |                 ^                        |  ^
-       |                 |         NON            |  |
-    +--+               +--------------------------+  |
-    |S |               | |                           | NON
-    +--+               | +------------------------+  |
-       |               v          FIT             |  |
-       |           +------+                       +--+---+
-       |           |      |                       |      |
-       +---------->+ JUMP +---------------------->+STARTR|
-           NON     |      |       FIT             |      |
-                   +--+---+                       +------+
-                      ^   |
-                      |   |
-                      |   | NON
-                      +---+
-    */
-    enum Symbol { NONE, FIT, NONFIT, EQUAL, LESS, GREATER, JUMP }
-    enum State { START, STARTOFRUN, REPEATING, ENDOFRUN, JUMPING, FINISHING, FINAL }
-    static State transition[][] = {
-           //  NONE        FIT             NONFIT
-    {
-    // START
-           State.FINAL, State.REPEATING, State.JUMPING
-    }, {
-    // STARTOFRUN
-           State.FINAL, State.REPEATING, State.ENDOFRUN
-    }, {
-    // REPEATING
-           State.ENDOFRUN, State.REPEATING, State.ENDOFRUN
-    }, {
-    // ENDOFRUN
-           State.FINAL, State.REPEATING, State.JUMPING
-    }, {
-    // JUMPING
-           State.FINISHING, State.STARTOFRUN, State.JUMPING
-    }, {
-    // FINAL
-           State.FINAL, State.FINAL, State.FINAL
-    }
-    };
-
-
-    private static int index = 0;
-    private static char c = 0, nextc = 0;
-    private static final int  minimalRunCount = 3;
-    private static Symbol kindOfFIT = Symbol.NONE;
-
-    @NonNull
     public static String getMemoPhoneNumber(String ownPhoneNumber) {
         // group number to enhance memorization (equal digits, inc/dec digits)
-        TAG = "static";
         if (ownPhoneNumber == null) return ownPhoneNumber;
         if (ownPhoneNumber.length() < 3) return ownPhoneNumber;
 
-        String memoPhoneNumber = "";
-        Symbol symbol;
-        State state = State.START;
-        StringBuilder buffer = new StringBuilder ();
-        index = 0; nextc = 0; c = 0;
-
-        while (state != State.FINAL) {
-            symbol = nextSymbol(ownPhoneNumber);
-            switch(state) {
-                case START:
-                    // Log.d(TAG, "getMemoPhoneNumber: START ");
-                    symbol = setKindOfFITfrom(symbol);
-                    break;
-                case REPEATING:
-                    symbol = getFITorNONFITfromKindOfFIT(symbol);
-                    break;
-                case JUMPING:
-                    symbol = setKindOfFITfrom(symbol);
-                    break;
-                case STARTOFRUN:
-                    // flush buffer, keep last char for new run
-                    memoPhoneNumber += buffer.substring(0,buffer.length()-1);
-                    char cc = buffer.charAt(buffer.length()-1);
-                    buffer.setLength(0);
-                    buffer.append(cc);
-                    symbol = getFITorNONFITfromKindOfFIT(symbol);
-                    break;
-                case ENDOFRUN:
-                    symbol = setKindOfFITfrom(symbol);
-                    // flush buffer, possibly format result
-                    if (buffer.length() >= minimalRunCount) {
-                        memoPhoneNumber += " " + buffer + " ";
-                        buffer.setLength(0);
+        StringBuilder memoPhoneNumber = new StringBuilder();
+        int minimalRunCount = 3;
+        int total = ownPhoneNumber.length();
+        int index = 0;
+        char nextc = 0;
+        int emergencyExitCount = 0;
+        while (index < total - 1) {
+            if (emergencyExitCount++ > total) return ownPhoneNumber;
+            char c = ownPhoneNumber.charAt(index);
+            nextc = ownPhoneNumber.charAt(index+1);
+            int equalDigitCount = (c == nextc) ? 1 : 0;
+            int incrementDigitCount = (+1 + (int) c == (int) nextc) ? 1 : 0;
+            int decrementDigitCount = (-1 + (int) c == (int) nextc) ? 1 : 0;
+            if (BuildConfig.DEBUG && (equalDigitCount+incrementDigitCount+decrementDigitCount > 1)) throw new AssertionError("getMemoPhoneNumber() at most one Count must exist.");
+            if (equalDigitCount+incrementDigitCount+decrementDigitCount == 0 || index + 2 >= total) {  // no run found or last 2 chars in number
+                memoPhoneNumber.append(c);
+                index++;
+                continue;
+            }
+            for (int i = index + 2; i < total ; i++) {
+                c = nextc;
+                nextc = ownPhoneNumber.charAt(i);
+                boolean runover = false;
+                if (equalDigitCount > 0 && c == nextc) equalDigitCount++;
+                else if (incrementDigitCount > 0 && (+1 + (int) c == (int) nextc)) incrementDigitCount++;
+                else if (decrementDigitCount > 0 && (-1 + (int) c == (int) nextc)) decrementDigitCount++;
+                else runover = true;
+                if (BuildConfig.DEBUG && (signum(equalDigitCount)+signum(incrementDigitCount)+signum(decrementDigitCount) > 1)) throw new AssertionError("getMemoPhoneNumber() only one Count greater 0 must exist.");
+                if (runover || i == total - 1) {
+                    if (equalDigitCount + incrementDigitCount + decrementDigitCount + 1 >= minimalRunCount) {
+                        // format run
+                        memoPhoneNumber.append(" " + ownPhoneNumber.substring(index, i));
+                        // add space if at least two chars left  OR   last char does not fit to run
+                        if (i < total - 1 || (i == total - 1 && runover)) memoPhoneNumber.append(" ");
+                        index = i;
                     }
                     else {
-                        memoPhoneNumber += buffer;
-                        buffer.setLength(0);
-                        if (symbol == Symbol.FIT) {
-                            // recover first char of new run
-                            cc = memoPhoneNumber.charAt(memoPhoneNumber.length()-1);
-                            memoPhoneNumber = memoPhoneNumber.substring(0, memoPhoneNumber.length()-1);
-                            buffer.append(cc);
-                        }
+                        memoPhoneNumber.append(     ownPhoneNumber.substring(index, i - 1)       );
+                        index = i - 1;
                     }
                     break;
-                case FINISHING:
-                    // get remaining numbers from buffer
-                    memoPhoneNumber += buffer;
-                    buffer.setLength(0);
-                    break;
-                case FINAL:
-                    // done
-                    if (BuildConfig.DEBUG) throw new AssertionError("getMemoPhoneNumber() 'FINAL:' can never happen ");
-                    break;
-                default:
-                    if (BuildConfig.DEBUG) throw new AssertionError("getMemoPhoneNumber() 'default:' can never happen ");
-                    break;
-            }
-            if (BuildConfig.DEBUG && (symbol != Symbol.NONE && symbol != Symbol.FIT && symbol != Symbol.NONFIT)) throw new AssertionError("getMemoPhoneNumber() 'symbol must be NONE, FIT, or NONFIT.");
-            buffer.append(c);
-            state = transition[state.ordinal()][symbol.ordinal()];
-            if (index > ownPhoneNumber.length() + 2) {  // emergency exit
-                state = State.FINAL;
-                memoPhoneNumber = ownPhoneNumber;
-                buffer.setLength(0);
+                }
             }
         }
+        memoPhoneNumber.append(nextc);
         // trim space: left, right, and multiple
-        return memoPhoneNumber.trim().replaceAll(" +", " ");
+        return memoPhoneNumber.toString().trim().replaceAll(" +", " ");
     }
-
-    @NonNull
-    private static Symbol getFITorNONFITfromKindOfFIT(Symbol symbol) {
-        if (symbol == Symbol.NONE) {
-            kindOfFIT = Symbol.NONE;
-            return symbol;
-        }
-        if (kindOfFIT == symbol) symbol = Symbol.FIT;
-        else if (symbol != Symbol.NONE) symbol = Symbol.NONFIT;
-        if (BuildConfig.DEBUG && (symbol != Symbol.NONE && symbol != Symbol.FIT && symbol != Symbol.NONFIT)) throw new AssertionError("getFITorNONFITfromKindOfFIT() 'symbol must be NONE, FIT, or NONFIT.");
-        return symbol;
-    }
-
-    private static Symbol setKindOfFITfrom(Symbol symbol) {
-        if (symbol == Symbol.EQUAL || symbol == Symbol.LESS || symbol == Symbol.GREATER) { kindOfFIT = symbol; symbol = Symbol.FIT; }
-        if (symbol == Symbol.JUMP) symbol = Symbol.NONFIT;
-        if (symbol == Symbol.NONFIT || symbol == Symbol.NONE) kindOfFIT = Symbol.NONE;
-        if (BuildConfig.DEBUG && (symbol != Symbol.NONE && symbol != Symbol.FIT && symbol != Symbol.NONFIT)) throw new AssertionError("setKindOfFITfrom() 'symbol must be NONE, FIT, or NONFIT.");
-        if (BuildConfig.DEBUG && (kindOfFIT != Symbol.NONE && kindOfFIT != Symbol.EQUAL && kindOfFIT != Symbol.LESS && kindOfFIT != Symbol.GREATER)) throw new AssertionError("setKindOfFITfrom() 'kindOfFIT must be NONE, EQUAL, LESS, or GREATER.");
-        return symbol;
-    }
-
-    private static Symbol nextSymbol(String ownPhoneNumber) {
-        // TODO: pass class variables like c, nextc, ... per referenced class
-        if (BuildConfig.DEBUG && ownPhoneNumber.length() < 3) throw new AssertionError("ownPhoneNumber is too short");
-        Symbol symbol;
-        if (c == 0) {
-            nextc = ownPhoneNumber.charAt(index++);
-        }
-        if (ownPhoneNumber.length() > index) {
-            c = nextc;
-            nextc = ownPhoneNumber.charAt(index++);
-        } else {
-            c = nextc;
-            index++;
-            symbol = Symbol.NONE;
-            return symbol;
-        }
-        if (c == nextc) symbol = Symbol.EQUAL;
-        else if (+1 + (int) c == (int) nextc) symbol = Symbol.GREATER;
-        else if (-1 + (int) c == (int) nextc) symbol = Symbol.LESS;
-        else symbol = Symbol.JUMP;
-        return symbol;
-    }
-
 
     /**
      * http://stackoverflow.com/questions/3659809/where-am-i-get-country
