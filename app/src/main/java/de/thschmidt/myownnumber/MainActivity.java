@@ -21,6 +21,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 import java.util.Collections;
@@ -112,6 +113,17 @@ public class MainActivity extends ActionBarActivity {
         }
 
         final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
+        myTextBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                TAG = this.toString();
+                String number = String.valueOf(myTextBox.getText());
+                Log.d(TAG, "onClick(): copy number = '" + number + "' to clipboard");
+                MyClipboardManager clipboard = new MyClipboardManager();
+                clipboard.copyToClipboard(getApplicationContext(), number);
+                ToastToClipboard(number);
+            }
+        });
         myTextBox.setText(getOwnPhoneNumber(getApplicationContext()));
         // http://stackoverflow.com/questions/22679700/android-how-to-get-phone-number-from-the-dual-sim-phone
 
@@ -138,6 +150,13 @@ public class MainActivity extends ActionBarActivity {
         Log.d(TAG, "onCreate(): leave");
     }
 
+    private void ToastToClipboard(String number) {
+        String info = number + " \u27A0 \uD83D\uDCCB"; // ➠ clipboard   ↪ = \u21AA
+        // show own number to improve user memory
+        Log.d(TAG, "onClick():    Toast " + info.replace('\n',' '));
+        Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
+    }
+
     @Override
     protected void onStop(){
         TAG = this.toString();
@@ -151,7 +170,6 @@ public class MainActivity extends ActionBarActivity {
         editor.commit();
         Log.d(TAG, "onStop(): commit changes to suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
     }
-
 
     public static String getOwnPhoneNumber(Context context) {
         if (ownPhoneNumber.equals("")) {
@@ -344,6 +362,7 @@ public class MainActivity extends ActionBarActivity {
                 Log.d(TAG, "onOptionsItemSelected(" + id + "): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
                 MyClipboardManager clipboard = new MyClipboardManager();
                 clipboard.copyToClipboard(getApplicationContext(), getOwnPhoneNumber(getApplicationContext()));
+                ToastToClipboard(getOwnPhoneNumber(getApplicationContext()));
                 return true;
             case R.id.action_suggestSendingSMStoCallee:
                 if (item.isChecked()) {
