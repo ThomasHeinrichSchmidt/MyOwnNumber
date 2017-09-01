@@ -2,8 +2,9 @@
 <resources>
 
     <string name="app_name">My Own Number</string>
-    <string name="action_copy">Copy to clipboard</string>
+    <string name="action_copy">Copy to Clipboard</string>
     <string name="action_suggestSendingSMStoCallee">SMS/Text to Callee</string>
+    <string name="action_policy">Privacy Policy</string>
     <string name="MyOwnNumber">My Own Number</string>
     <string name="DefaultPhoneNumber">xx49 3210 12345678</string>
     <string name="UnknownPhoneNumber">+?? ???-???-????</string>

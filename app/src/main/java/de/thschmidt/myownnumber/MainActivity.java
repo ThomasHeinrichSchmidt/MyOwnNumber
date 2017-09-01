@@ -374,6 +374,12 @@ public class MainActivity extends ActionBarActivity {
                 }
                 item.setChecked(isSuggestSendingSMStoCallee());
                 Log.d(TAG, "onOptionsItemSelected(" + id + "): suggestSendingSMStoCallee := '" + isSuggestSendingSMStoCallee() + "'");
+                return true;
+            case R.id.action_link_policy:
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.t-h-schmidt.de/myownnumber/privacy-policy/privacy-policy.html"));
+                Log.d(TAG, "onOptionsItemSelected(" + id + "): link_policy --> privacy-policy.html");
+                startActivity(browserIntent);
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }

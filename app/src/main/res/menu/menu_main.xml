@@ -6,4 +6,6 @@
     <item android:id="@+id/action_suggestSendingSMStoCallee" android:checkable="true"
         android:title="@string/action_suggestSendingSMStoCallee"
         android:orderInCategory="200" />
+    <item android:id="@+id/action_link_policy" android:title="@string/action_policy"
+        android:orderInCategory="300" app:showAsAction="never" />
 </menu>
