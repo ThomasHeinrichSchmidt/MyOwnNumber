@@ -27,6 +27,7 @@ public class MyPhoneReceiver extends BroadcastReceiver {
         Bundle extras = intent.getExtras();
 
         Log.d(TAG, "onReceive():    intent.getAction() is " + intent.getAction());
+        // MainActivity.checkAndSetRequiredPermissions();
         if (Intent.ACTION_NEW_OUTGOING_CALL.equals(intent.getAction())) {
             outgoingCallNumber = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
             toastOwnNumberToImproveUserMemory(context);

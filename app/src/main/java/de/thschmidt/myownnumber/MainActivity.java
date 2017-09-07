@@ -1,11 +1,13 @@
 package de.thschmidt.myownnumber;
 
+import android.Manifest;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -38,6 +40,8 @@ public class MainActivity extends ActionBarActivity {
     private static String ownPhoneNumber = "";
     private static String TAG = MainActivity.class.getSimpleName();
     private static boolean suggestSendingSMStoCallee;
+    private static boolean requiredPermissionREAD_PHONE_STATEwasGranted;
+    private static boolean requiredPermissionPROCESS_OUTGOING_CALLSwasGranted;
 
     public static boolean isSuggestSendingSMStoCallee() {
         return suggestSendingSMStoCallee;
@@ -45,6 +49,19 @@ public class MainActivity extends ActionBarActivity {
     public static void setSuggestSendingSMStoCallee(boolean suggestSendingSMStoCallee) {
         MainActivity.suggestSendingSMStoCallee = suggestSendingSMStoCallee;
     }
+    public static boolean isRequiredPermissionREAD_PHONE_STATEgranted() {
+        TAG = "isRequiredPermissionREAD_PHONE_STATEgranted()";
+        Log.d(TAG, "=" + requiredPermissionREAD_PHONE_STATEwasGranted);
+        return requiredPermissionREAD_PHONE_STATEwasGranted;
+    }
+    public static boolean isRequiredPermissionPROCESS_OUTGOING_CALLgranted() {
+        TAG = "isRequiredPermissionPROCESS_OUTGOING_CALLgranted()";
+        Log.d(TAG, "=" + requiredPermissionPROCESS_OUTGOING_CALLSwasGranted);
+        return requiredPermissionPROCESS_OUTGOING_CALLSwasGranted;
+    }
+
+    public static final int READ_PHONE_STATE_ID = 8372;
+    public static final int PROCESS_OUTGOING_CALLS_ID = 1471;
 
     // TODO: conditionally remove LOG.d() in release build by using private static final boolean Debug
 
@@ -52,11 +69,13 @@ public class MainActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         TAG = this.toString();
         Log.d(TAG, "onCreate(): enter");
-        Log.d(TAG, "onCreate(): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
         super.onCreate(savedInstanceState);
         // TODO: do not show activity if called from notification, just send SMS
         setContentView(R.layout.activity_main);
 
+        checkAndSetRequiredPermissions();
+
+        Log.d(TAG, "onCreate(): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
         // retrieve calling number, if activity was started by Notification, i.e. a calling number has been set
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
@@ -85,22 +104,27 @@ public class MainActivity extends ActionBarActivity {
                 }
                 else if (isSuggestSendingSMStoCallee()) {
                     Log.d(TAG, "onCreate(): text/SMS suggested due to menu setting suggestSendingSMStoCallee = " + isSuggestSendingSMStoCallee());
-                    Intent smsIntent = new Intent(Intent.ACTION_VIEW);
-                    smsIntent.setType("vnd.android-dir/mms-sms");
-                    smsIntent.putExtra("address", mCallingNumber);
-                    smsIntent.putExtra("sms_body", getOwnPhoneNumber(getApplicationContext()));
-                    startActivity(smsIntent);
-                    // TODO: check if works for all API levels  "Be aware, this will not work for android 4.4 and probably up... "vnd.android-dir/mms-sms" is not longer supported, Max Ch Jan 9 '14 at 18:32 - http://stackoverflow.com/questions/2372248/launch-sms-application-with-an-intent"
-                    // see below: sendSms()
-                    /**
-                        To start the SMS app with number populated use action ACTION_SENDTO:
-                            Intent intent = new Intent(Intent.ACTION_SENDTO);
-                            intent.setData(Uri.parse("smsto:" + Uri.encode(phoneNumber)));
-                            startActivity(intent);
-                        This will work on Android 4.4. It should also work on earlier versions of Android however as the APIs were never public the behavior might vary.
-                        If you didn't have issues with your prior method I would probably just stick to that pre-4.4 and use ACTION_SENDTO for 4.4+.
-                        http://stackoverflow.com/questions/19853220/android4-4-can-not-handle-sms-intent-with-vnd-android-dir-mms-sms
-                    */
+                    Intent smsIntent;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        // https://stackoverflow.com/questions/37111922/how-to-open-sms-app-via-implicit-intent
+                        smsIntent = new Intent(Intent.ACTION_SENDTO);
+                        smsIntent.setData(Uri.parse("smsto:" + Uri.encode(mCallingNumber)));
+                        smsIntent.putExtra("sms_body", getOwnPhoneNumber(getApplicationContext()));
+                    }
+                    else {
+                        smsIntent = new Intent(Intent.ACTION_VIEW);
+                        smsIntent.setType("vnd.android-dir/mms-sms");
+                        smsIntent.putExtra("address", mCallingNumber);
+                        smsIntent.putExtra("sms_body", getOwnPhoneNumber(getApplicationContext()));
+                    }
+                    try {
+                        if (smsIntent.resolveActivity(getPackageManager()) != null) {
+                            startActivity(smsIntent);
+                        }
+                        Log.d(TAG, "onCreate(): Finished sending SMS...");
+                    } catch (android.content.ActivityNotFoundException ex) {
+                        Toast.makeText(getApplicationContext(), "Text/SMS failed.",Toast.LENGTH_SHORT).show();
+                    }
                 }
                 else {
                     Log.d(TAG, "onCreate(): did not text/SMS due to menu setting suggestSendingSMStoCallee" + isSuggestSendingSMStoCallee());
@@ -150,6 +174,47 @@ public class MainActivity extends ActionBarActivity {
         Log.d(TAG, "onCreate(): leave");
     }
 
+    public void checkAndSetRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // https://stackoverflow.com/questions/38536970/getting-java-lang-securityexception-when-requesting-for-sim-info
+            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                requiredPermissionREAD_PHONE_STATEwasGranted = true;
+            }
+            else {
+                Log.d(TAG, "onCreate(): permission.READ_PHONE_STATE not granted");
+                requiredPermissionREAD_PHONE_STATEwasGranted = false;
+                requestPermissions(new String[]{Manifest.permission.READ_PHONE_STATE}, READ_PHONE_STATE_ID);
+            }
+            if (checkSelfPermission(Manifest.permission.PROCESS_OUTGOING_CALLS)  == PackageManager.PERMISSION_GRANTED) {
+                requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = true;
+            }
+            else {
+                Log.d(TAG, "onCreate(): permission.PROCESS_OUTGOING_CALLS not granted");
+                requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = false;
+                requestPermissions(new String[]{Manifest.permission.PROCESS_OUTGOING_CALLS}, PROCESS_OUTGOING_CALLS_ID);
+            }
+        }
+        else  {
+            requiredPermissionREAD_PHONE_STATEwasGranted = true;
+            requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        TAG = this.toString();
+        Log.d(TAG, "onRequestPermissionsResult(requestCode=" + requestCode + ", permissions=" + permissions + ", grantResults=" + grantResults);
+        if (READ_PHONE_STATE_ID == requestCode) {
+            Log.d(TAG, "requestCode READ_PHONE_STATE_ID hit ==> requiredPermissionREAD_PHONE_STATEwasGranted := true");
+            requiredPermissionREAD_PHONE_STATEwasGranted = true;
+            final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
+            myTextBox.setText(getOwnPhoneNumber(getApplicationContext()));
+        }
+        if (PROCESS_OUTGOING_CALLS_ID == requestCode) {
+            Log.d(TAG, "requestCode PROCESS_OUTGOING_CALLS_ID hit ==> requiredPermissionPROCESS_OUTGOING_CALLSwasGranted := true");
+            requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = true;
+        }
+    }
     private void ToastToClipboard(String number) {
         String info = number + " \u27A0 \uD83D\uDCCB"; // ➠ clipboard   ↪ = \u21AA
         // show own number to improve user memory
@@ -172,11 +237,13 @@ public class MainActivity extends ActionBarActivity {
     }
 
     public static String getOwnPhoneNumber(Context context) {
-        if (ownPhoneNumber.equals("")) {
+        if (ownPhoneNumber.equals("") || ownPhoneNumber.equals(context.getString(R.string.UnknownPhoneNumber))) {
             // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
-            TelephonyManager tMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-            setOwnPhoneNumber(tMgr.getLine1Number());
-            if ((null != ownPhoneNumber) && (ownPhoneNumber.length() > 2)) {
+            if (isRequiredPermissionREAD_PHONE_STATEgranted()) {
+                TelephonyManager tMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+                setOwnPhoneNumber(tMgr.getLine1Number());
+            }
+            if ((null != ownPhoneNumber) && (ownPhoneNumber.length() > 2) && !ownPhoneNumber.equals(context.getString(R.string.UnknownPhoneNumber))) {
                 // ownPhoneNumber = ownPhoneNumber.substring(2);
                 if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {  // LOLLIPOP = 21
                     //noinspection deprecation
@@ -263,6 +330,9 @@ public class MainActivity extends ActionBarActivity {
             }
         }
         memoPhoneNumber.append(nextc);
+        // remove superfluous spaces
+        memoPhoneNumber = new StringBuilder(memoPhoneNumber.toString().replaceAll(" -", "-"));
+        memoPhoneNumber = new StringBuilder(memoPhoneNumber.toString().replaceAll("- ", "-"));
         // trim space: left, right, and multiple
         return memoPhoneNumber.toString().trim().replaceAll(" +", " ");
     }

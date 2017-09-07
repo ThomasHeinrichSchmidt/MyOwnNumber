@@ -41,7 +41,8 @@ public class MainActivityUnitTest {
             {"+414466 1111 0", "+41446611110"},
             {"+424466 1111 00", "+424466111100"},
             {"+434466 1111 000", "+4344661111000"},
-            {"8 (840) 123 -45-67", "8 (840) 123-45-67"}   // Phone Number entered: +7 840 123-45-67  , defaultCountry entered: RU,  Language entered: ru-RU
+            {"1-555-521-555 4", "1-555-521-5554"},         // Pixel_API23 emulator default phone number
+            {"8 (840) 123-45-67", "8 (840) 123-45-67"}   // Phone Number entered: +7 840 123-45-67  , defaultCountry entered: RU,  Language entered: ru-RU
 
             // list of formatted telephone numbers from different countries
     };

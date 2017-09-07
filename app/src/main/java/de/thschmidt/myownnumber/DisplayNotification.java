@@ -11,7 +11,7 @@ import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 
 /**
- * Created by  Created by --thomas. in June 2015.
+ * Created by --thomas. in June 2015.
  * used to display a notification about incoming calls and
  * offer to text/SMS the own number to the caller
  */
@@ -43,7 +43,7 @@ class DisplayNotification implements Runnable {
         if (MainActivity.isSuggestSendingSMStoCallee()) {
             Intent intent = new Intent(context, MainActivity.class);
             intent.putExtra("CallingNumber", mCallingNumber);
-            // TODO: check if mCallingNumber is "null" - may happen if caller suppresses number
+            // TODO: check if mCallingNumber is "null" - may happen if caller suppresses number - so far this method is not called anyways
             PendingIntent pendingIntent = PendingIntent.getActivity(context,
                     NOTIFICATION_ID, intent, PendingIntent.FLAG_UPDATE_CURRENT);
             String msg = "\u2709  \u00ab" + MainActivity.getOwnPhoneNumber(context) + "\u00bb  \u27A0  \u260F " + mCallingNumber;   //  letter arrow phone (U+2709 U+27A0 U260F)
