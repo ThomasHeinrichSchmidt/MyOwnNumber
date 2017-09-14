@@ -11,9 +11,10 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.provider.Telephony;
 import android.support.annotation.NonNull;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
@@ -29,11 +30,12 @@ import android.widget.Toast;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.*;
 import static java.lang.Integer.signum;
 
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity{
 
     // http://stackoverflow.com/questions/17371470/changing-ic-launcher-png-in-android-studio
 
@@ -44,20 +46,27 @@ public class MainActivity extends ActionBarActivity {
     private static boolean requiredPermissionPROCESS_OUTGOING_CALLSwasGranted;
 
     public static boolean isSuggestSendingSMStoCallee() {
-        return suggestSendingSMStoCallee;
+        return MainActivity.suggestSendingSMStoCallee;
     }
     public static void setSuggestSendingSMStoCallee(boolean suggestSendingSMStoCallee) {
         MainActivity.suggestSendingSMStoCallee = suggestSendingSMStoCallee;
     }
     public static boolean isRequiredPermissionREAD_PHONE_STATEgranted() {
-        TAG = "isRequiredPermissionREAD_PHONE_STATEgranted()";
-        Log.d(TAG, "=" + requiredPermissionREAD_PHONE_STATEwasGranted);
-        return requiredPermissionREAD_PHONE_STATEwasGranted;
+        Log.d(TAG, "isRequiredPermissionREAD_PHONE_STATEgranted() = " + requiredPermissionREAD_PHONE_STATEwasGranted);
+        return MainActivity.requiredPermissionREAD_PHONE_STATEwasGranted;
+    }
+    public static void setRequiredPermissionREAD_PHONE_STATEgranted(boolean requiredPermissionREAD_PHONE_STATEwasGranted) {
+        Log.d(TAG, "setRequiredPermissionREAD_PHONE_STATEgranted() = " + requiredPermissionREAD_PHONE_STATEwasGranted);
+        MainActivity.requiredPermissionREAD_PHONE_STATEwasGranted = requiredPermissionREAD_PHONE_STATEwasGranted;
     }
     public static boolean isRequiredPermissionPROCESS_OUTGOING_CALLgranted() {
-        TAG = "isRequiredPermissionPROCESS_OUTGOING_CALLgranted()";
-        Log.d(TAG, "=" + requiredPermissionPROCESS_OUTGOING_CALLSwasGranted);
-        return requiredPermissionPROCESS_OUTGOING_CALLSwasGranted;
+        Log.d("PROCESS_OUTGOING_CALL()", " = " + requiredPermissionPROCESS_OUTGOING_CALLSwasGranted);
+        return MainActivity.requiredPermissionPROCESS_OUTGOING_CALLSwasGranted;
+    }
+    public static void setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(boolean requiredPermissionPROCESS_OUTGOING_CALLSwasGranted) {
+        TAG = "setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted()";
+        Log.d(TAG, " = " + requiredPermissionPROCESS_OUTGOING_CALLSwasGranted);
+        MainActivity.requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = requiredPermissionPROCESS_OUTGOING_CALLSwasGranted;
     }
 
     public static final int READ_PHONE_STATE_ID = 8372;
@@ -164,76 +173,101 @@ public class MainActivity extends ActionBarActivity {
                 Log.d(TAG, "addTextChangedListener(): enter onTextChanged()");
             }
         });
+        restoreSettingSuggestSendingSMStoCallee();
+        Log.d(TAG, "onCreate(): leave");
+    }
 
-        // Re-Store preferences
-        SharedPreferences settings = getPreferences(MODE_PRIVATE);
+    private void restoreSettingSuggestSendingSMStoCallee() {
+        TAG = "restoreSettingSuggestSendingSMStoCallee(): ";
+        // Restore preferences
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+        Map<String,?> keys = settings.getAll();
+        for(Map.Entry<String,?> entry : keys.entrySet()){
+            Log.d(TAG + " pref value", entry.getKey() + " = " +  entry.getValue().toString());
+        }
         setSuggestSendingSMStoCallee(settings.getBoolean("suggestSendingSMStoCallee", true));
         Log.d(TAG, "set suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
-
-
-        Log.d(TAG, "onCreate(): leave");
     }
 
     public void checkAndSetRequiredPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // https://stackoverflow.com/questions/38536970/getting-java-lang-securityexception-when-requesting-for-sim-info
             if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-                requiredPermissionREAD_PHONE_STATEwasGranted = true;
+                setRequiredPermissionREAD_PHONE_STATEgranted(true);
             }
             else {
                 Log.d(TAG, "onCreate(): permission.READ_PHONE_STATE not granted");
-                requiredPermissionREAD_PHONE_STATEwasGranted = false;
+                setRequiredPermissionREAD_PHONE_STATEgranted(false);
                 requestPermissions(new String[]{Manifest.permission.READ_PHONE_STATE}, READ_PHONE_STATE_ID);
             }
             if (checkSelfPermission(Manifest.permission.PROCESS_OUTGOING_CALLS)  == PackageManager.PERMISSION_GRANTED) {
-                requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = true;
+                setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(true);
             }
             else {
                 Log.d(TAG, "onCreate(): permission.PROCESS_OUTGOING_CALLS not granted");
-                requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = false;
+                setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(false);
                 requestPermissions(new String[]{Manifest.permission.PROCESS_OUTGOING_CALLS}, PROCESS_OUTGOING_CALLS_ID);
             }
         }
         else  {
-            requiredPermissionREAD_PHONE_STATEwasGranted = true;
-            requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = true;
+            setRequiredPermissionREAD_PHONE_STATEgranted(true);
+            setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(true);
         }
+        restoreSettingSuggestSendingSMStoCallee();
+        SavePreferences();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        TAG = this.toString();
         Log.d(TAG, "onRequestPermissionsResult(requestCode=" + requestCode + ", permissions=" + permissions + ", grantResults=" + grantResults);
         if (READ_PHONE_STATE_ID == requestCode) {
-            Log.d(TAG, "requestCode READ_PHONE_STATE_ID hit ==> requiredPermissionREAD_PHONE_STATEwasGranted := true");
-            requiredPermissionREAD_PHONE_STATEwasGranted = true;
-            final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
-            myTextBox.setText(getOwnPhoneNumber(getApplicationContext()));
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "requestCode READ_PHONE_STATE_ID hit ==> requiredPermissionREAD_PHONE_STATEwasGranted := true");
+                setRequiredPermissionREAD_PHONE_STATEgranted(true);
+                final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
+                myTextBox.setText(getOwnPhoneNumber(getApplicationContext()));
+            } else {
+                Log.d(TAG, "requestCode READ_PHONE_STATE_ID hit ==> requiredPermissionREAD_PHONE_STATEwasGranted := false");
+                setRequiredPermissionREAD_PHONE_STATEgranted(false);
+            }
         }
         if (PROCESS_OUTGOING_CALLS_ID == requestCode) {
-            Log.d(TAG, "requestCode PROCESS_OUTGOING_CALLS_ID hit ==> requiredPermissionPROCESS_OUTGOING_CALLSwasGranted := true");
-            requiredPermissionPROCESS_OUTGOING_CALLSwasGranted = true;
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "requestCode PROCESS_OUTGOING_CALLS_ID hit ==> requiredPermissionPROCESS_OUTGOING_CALLSwasGranted := true");
+                setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(true);
+            } else {
+                Log.d(TAG, "requestCode PROCESS_OUTGOING_CALLS_ID hit ==> requiredPermissionPROCESS_OUTGOING_CALLSwasGranted := false");
+                setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(false);
+            }
         }
     }
     private void ToastToClipboard(String number) {
         String info = number + " \u27A0 \uD83D\uDCCB"; // ➠ clipboard   ↪ = \u21AA
         // show own number to improve user memory
-        Log.d(TAG, "onClick():    Toast " + info.replace('\n',' '));
+        Log.d(TAG, "ToastToClipboard():    Toast " + info.replace('\n',' '));
         Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
     }
 
     @Override
     protected void onStop(){
-        TAG = this.toString();
+        SavePreferences();
         super.onStop();
+        Log.d(TAG, "onStop(): commit changes to suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
+    }
+
+    private void SavePreferences() {
         // We need an Editor object to make preference changes.
-        // All objects are from android.context.Context
-        SharedPreferences settings = getPreferences(MODE_PRIVATE);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
         SharedPreferences.Editor editor = settings.edit();
         editor.putBoolean("suggestSendingSMStoCallee", isSuggestSendingSMStoCallee());
-        // Commit the edits!
+        editor.putBoolean("requiredPermissionREAD_PHONE_STATEwasGranted", isRequiredPermissionREAD_PHONE_STATEgranted());
+        editor.putBoolean("requiredPermissionPROCESS_OUTGOING_CALLSwasGranted", isRequiredPermissionPROCESS_OUTGOING_CALLgranted());
         editor.commit();
-        Log.d(TAG, "onStop(): commit changes to suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
+        Map<String,?> keys = settings.getAll();
+        for(Map.Entry<String,?> entry : keys.entrySet()){
+            Log.d(TAG, "SavePreferences(): pref value" + entry.getKey() + ": " +  entry.getValue().toString());
+        }
+        Log.d(TAG, "SavePreferences(): finished");
     }
 
     public static String getOwnPhoneNumber(Context context) {
@@ -344,7 +378,6 @@ public class MainActivity extends ActionBarActivity {
      * @return country code or null
      */
     private static String getUserCountry(Context context) {
-        TAG = "static";
         try {
             final TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
             final String simCountry = tm.getSimCountryIso();
@@ -412,6 +445,7 @@ public class MainActivity extends ActionBarActivity {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         // set suggest Sending SMS to Callee from SharedPreferences
+        restoreSettingSuggestSendingSMStoCallee();
         MenuItem sms = menu.findItem(R.id.action_suggestSendingSMStoCallee);
         if (sms != null && sms.isCheckable()) {
             sms.setChecked(isSuggestSendingSMStoCallee());
@@ -425,8 +459,6 @@ public class MainActivity extends ActionBarActivity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        TAG = this.toString();
-
         switch (item.getItemId()) {
             case  R.id.action_copy:
                 Log.d(TAG, "onOptionsItemSelected(" + id + "): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
@@ -443,6 +475,7 @@ public class MainActivity extends ActionBarActivity {
                     setSuggestSendingSMStoCallee(true);
                 }
                 item.setChecked(isSuggestSendingSMStoCallee());
+                SavePreferences();
                 Log.d(TAG, "onOptionsItemSelected(" + id + "): suggestSendingSMStoCallee := '" + isSuggestSendingSMStoCallee() + "'");
                 return true;
             case R.id.action_link_policy:

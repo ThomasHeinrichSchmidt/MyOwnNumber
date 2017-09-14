@@ -3,8 +3,10 @@ package de.thschmidt.myownnumber;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.widget.Toast;
@@ -24,6 +26,13 @@ public class MyPhoneReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.d(TAG, "onReceive(): enter");
+
+        Log.d(TAG, "onReceive(): set permissions from SharedPreferences");
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(context.getApplicationContext());
+        // will provide an access to a preferences file that is global for the whole application package, cf.  https://stackoverflow.com/questions/5652682/android-preferences-what-is-the-difference
+        MainActivity.setRequiredPermissionREAD_PHONE_STATEgranted(settings.getBoolean("requiredPermissionREAD_PHONE_STATEwasGranted", false));
+        MainActivity.setRequiredPermissionPROCESS_OUTGOING_CALLSwasGranted(settings.getBoolean("requiredPermissionPROCESS_OUTGOING_CALLSwasGranted", false));
+
         Bundle extras = intent.getExtras();
 
         Log.d(TAG, "onReceive():    intent.getAction() is " + intent.getAction());
