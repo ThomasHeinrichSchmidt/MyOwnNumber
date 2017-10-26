@@ -10,13 +10,13 @@ android {
         }
     }
     compileSdkVersion 23
-    buildToolsVersion '25.0.0'
+    buildToolsVersion '26.0.2'
     defaultConfig {
         applicationId "de.thschmidt.myownnumber"
         minSdkVersion 8
         targetSdkVersion 23
-        versionCode 8
-        versionName "1.2"
+        versionCode 9
+        versionName "1.3"
         //noinspection GroovyAssignabilityCheck
         signingConfig signingConfigs.config
     }

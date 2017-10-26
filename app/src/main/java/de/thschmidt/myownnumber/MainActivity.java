@@ -275,16 +275,16 @@ public class MainActivity extends AppCompatActivity{
             // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
             if (isRequiredPermissionREAD_PHONE_STATEgranted()) {
                 TelephonyManager tMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-                setOwnPhoneNumber(tMgr.getLine1Number());
+                setOwnPhoneNumber(context, tMgr.getLine1Number());
             }
             if ((null != ownPhoneNumber) && (ownPhoneNumber.length() > 2) && !ownPhoneNumber.equals(context.getString(R.string.UnknownPhoneNumber))) {
                 // ownPhoneNumber = ownPhoneNumber.substring(2);
                 if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {  // LOLLIPOP = 21
                     //noinspection deprecation
-                    setOwnPhoneNumber(PhoneNumberUtils.formatNumber(ownPhoneNumber));
+                    setOwnPhoneNumber(context, PhoneNumberUtils.formatNumber(ownPhoneNumber));
                 } else {
                     String formattedNumber = PhoneNumberUtils.formatNumber(ownPhoneNumber, getUserCountry(context.getApplicationContext()));
-                    if (formattedNumber != null) setOwnPhoneNumber(formattedNumber);
+                    if (formattedNumber != null) setOwnPhoneNumber(context, formattedNumber);
                 }
             } else {
             /*
@@ -293,24 +293,31 @@ public class MainActivity extends AppCompatActivity{
             Extra benefits of this trick: 1. you can get all the line numbers if there is multi sim in the device.
             You will get all the sim numbers ever used in the device, check time frame (sms received or sent only today) etc.
              */
-                setOwnPhoneNumber(context.getString(R.string.UnknownPhoneNumber));
+                setOwnPhoneNumber(context, context.getString(R.string.UnknownPhoneNumber));
             }
         }
         return ownPhoneNumber;
     }
 
-    private static void setOwnPhoneNumber(String ownPhoneNumber) {
-        // remove *31# or (better) use number starting from + or 00 or 0
-        Pattern p = Pattern.compile("\\+?[- 0-9]{3,}$");  // rightmost string of at least 3 digits or blanks optionally preceded by a +
-        Matcher m = p.matcher(ownPhoneNumber);
-        if (m.find()) {
-            try {
-                ownPhoneNumber = m.group();
+    private static void setOwnPhoneNumber(Context context, String ownPhoneNumber) {
+        String _ownPhoneNumber = new String(ownPhoneNumber) ;
+        Log.d("setOwnPhoneNumber(): ", "_ownPhoneNumber = " + _ownPhoneNumber);
+        if (_ownPhoneNumber != null && !_ownPhoneNumber.equals("")) {
+            // remove *31# or (better) use number starting from + or 00 or 0
+            Pattern p = Pattern.compile("\\+?[- 0-9]{3,}$");  // rightmost string of at least 3 digits or blanks optionally preceded by a +
+            Matcher m = p.matcher(_ownPhoneNumber);
+            if (m.find()) {
+                try {
+                    _ownPhoneNumber = m.group();
+                } catch (Exception e) {
+                }
             }
-            catch (Exception e) { }
+            _ownPhoneNumber = getMemoPhoneNumber(_ownPhoneNumber);
         }
-        ownPhoneNumber = getMemoPhoneNumber(ownPhoneNumber);
-        MainActivity.ownPhoneNumber = ownPhoneNumber;
+        else {
+            _ownPhoneNumber =  context.getString(R.string.UnknownPhoneNumber);
+        }
+        MainActivity.ownPhoneNumber = _ownPhoneNumber;
     }
 
     @NonNull
