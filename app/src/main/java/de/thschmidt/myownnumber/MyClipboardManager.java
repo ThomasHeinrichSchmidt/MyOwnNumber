@@ -1,5 +1,8 @@
 /*
- * Copyright (c) 2015 by Thomas H. Schmidt, Linden - have fun!
+ * Created by Thomas H. Schmidt, Linden on 10.07.15 09:07
+ * Copyright (c) 2018 . No rights reserved - have fun!
+ * Last change: 23.07.15 16:04
+ *
  */
 
 package de.thschmidt.myownnumber;

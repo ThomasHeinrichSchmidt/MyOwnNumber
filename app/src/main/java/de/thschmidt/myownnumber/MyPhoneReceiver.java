@@ -1,3 +1,10 @@
+/*
+ * Created by Thomas H. Schmidt, Linden on 10.07.15 09:05
+ * Copyright (c) 2018 . No rights reserved - have fun!
+ * Last change: 14.09.17 22:20
+ *
+ */
+
 package de.thschmidt.myownnumber;
 
 import android.content.BroadcastReceiver;

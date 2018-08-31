@@ -1,3 +1,10 @@
+/*
+ * Created by Thomas H. Schmidt, Linden on 10.07.15 09:07
+ * Copyright (c) 2018 . No rights reserved - have fun!
+ * Last change: 07.09.17 20:49
+ *
+ */
+
 package de.thschmidt.myownnumber;
 
 import android.app.Notification;

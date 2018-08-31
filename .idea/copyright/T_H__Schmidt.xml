@@ -1,6 +1,6 @@
 <component name="CopyrightManager">
   <copyright>
     <option name="myName" value="T.H. Schmidt" />
-    <option name="notice" value="Copyright (c) &amp;#36;today.year by Thomas H. Schmidt, Linden - have fun! " />
+    <option name="notice" value="Created by Thomas H. Schmidt, Linden on &amp;#36;today&#10;Copyright (c) &amp;#36;today.year . No rights reserved - have fun!&#10;Last change: &amp;#36;file.LastModified &#10;" />
   </copyright>
 </component>
