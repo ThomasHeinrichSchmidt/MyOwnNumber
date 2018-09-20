@@ -15,6 +15,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -164,7 +165,10 @@ public class MainActivity extends AppCompatActivity{
                 ToastToClipboard(number);
             }
         });
-        myTextBox.setText(getOwnPhoneNumber(getApplicationContext()));
+        Context myContext = getApplicationContext();
+        String myPhoneNumber = "???";
+        if (myContext != null) myPhoneNumber = getOwnPhoneNumber(myContext);
+        myTextBox.setText(myPhoneNumber);
         // http://stackoverflow.com/questions/22679700/android-how-to-get-phone-number-from-the-dual-sim-phone
 
         myTextBox.addTextChangedListener(new TextWatcher() {
@@ -282,7 +286,17 @@ public class MainActivity extends AppCompatActivity{
             // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
             if (isRequiredPermissionREAD_PHONE_STATEgranted()) {
                 TelephonyManager tMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-                setOwnPhoneNumber(context, tMgr.getLine1Number());
+                String  Line1Number;
+                try {
+                    Line1Number = tMgr.getLine1Number();
+                }
+                catch (SecurityException se) {
+                    Line1Number = context.getString(R.string.UnknownPhoneNumber);
+                }
+                catch (Exception e)  {
+                    Line1Number = context.getString(R.string.DefaultPhoneNumber);
+                }
+                setOwnPhoneNumber(context, Line1Number);
             }
             if ((null != ownPhoneNumber) && (ownPhoneNumber.length() > 2) && !ownPhoneNumber.equals(context.getString(R.string.UnknownPhoneNumber))) {
                 // ownPhoneNumber = ownPhoneNumber.substring(2);
@@ -307,7 +321,7 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private static void setOwnPhoneNumber(Context context, String ownPhoneNumber) {
-        String _ownPhoneNumber = new String(ownPhoneNumber) ;
+        String _ownPhoneNumber = ownPhoneNumber;
         Log.d("setOwnPhoneNumber(): ", "_ownPhoneNumber = " + _ownPhoneNumber);
         if (_ownPhoneNumber != null && !_ownPhoneNumber.equals("")) {
             // remove *31# or (better) use number starting from + or 00 or 0
