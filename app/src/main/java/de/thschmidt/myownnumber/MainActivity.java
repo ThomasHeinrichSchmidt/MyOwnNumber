@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,10 +31,14 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.ViewTreeObserver;
+import android.view.inputmethod.InputMethodManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Collections;
 import java.util.List;
@@ -43,10 +48,11 @@ import java.util.regex.*;
 import static java.lang.Integer.signum;
 
 
-public class MainActivity extends AppCompatActivity{
+public class MainActivity extends AppCompatActivity implements KeyboardStateObserver.KeyboardStateListener {
 
     // http://stackoverflow.com/questions/17371470/changing-ic-launcher-png-in-android-studio
 
+    private AppCompatActivity activity = MainActivity.this;
     private static String ownPhoneNumber = "";
     private static String TAG = MainActivity.class.getSimpleName();
     private static boolean suggestSendingSMStoCallee;
@@ -55,6 +61,9 @@ public class MainActivity extends AppCompatActivity{
 
     public static boolean isSuggestSendingSMStoCallee() {
         return MainActivity.suggestSendingSMStoCallee;
+    }
+    public static void setOwnPhoneNumber(String phoneNumber) {
+        MainActivity.ownPhoneNumber = phoneNumber;
     }
     public static void setSuggestSendingSMStoCallee(boolean suggestSendingSMStoCallee) {
         MainActivity.suggestSendingSMStoCallee = suggestSendingSMStoCallee;
@@ -91,6 +100,7 @@ public class MainActivity extends AppCompatActivity{
         setContentView(R.layout.activity_main);
 
         checkAndSetRequiredPermissions();
+        restoreSettingSavedPhoneNumber();
 
         Log.d(TAG, "onCreate(): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
         // retrieve calling number, if activity was started by Notification, i.e. a calling number has been set
@@ -153,18 +163,55 @@ public class MainActivity extends AppCompatActivity{
             }
         }
 
+        final KeyboardStateObserver myKeyboardStateObserver = new KeyboardStateObserver(activity);
+        myKeyboardStateObserver.addKeyboardStateListener(this); // register MainActivity.onKeyboardShown(), MainActivity.onKeyboardHidden()
+
         final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
         myTextBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 TAG = this.toString();
-                String number = String.valueOf(myTextBox.getText());
-                Log.d(TAG, "onClick(): copy number = '" + number + "' to clipboard");
-                MyClipboardManager clipboard = new MyClipboardManager();
-                clipboard.copyToClipboard(getApplicationContext(), number);
-                ToastToClipboard(number);
+                if (myTextBox.hasFocusable()) {
+                    Log.d(TAG, "onClick(): while focusable, don't copy number to clipboard");
+                }
+                else {
+                    String number = String.valueOf(myTextBox.getText());
+                    Log.d(TAG, "onClick(): copy number = '" + number + "' to clipboard");
+                    MyClipboardManager clipboard = new MyClipboardManager();
+                    clipboard.copyToClipboard(getApplicationContext(), number);
+                    ToastToClipboard(number);
+                }
             }
         });
+        myTextBox.setOnLongClickListener(new View.OnLongClickListener() {
+             @Override
+             public boolean onLongClick(View v) {
+                 TAG = this.toString();
+                 String number = String.valueOf(myTextBox.getText());
+                 Log.d(TAG, "onLongClick(): enable edit number = '" + number + "' ");
+                 myTextBox.setFocusable(true);
+                 myTextBox.setFocusableInTouchMode(true);
+                 myTextBox.requestFocus();
+                 // show soft keyboard
+                 InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                 imm.showSoftInput(myTextBox, InputMethodManager.SHOW_IMPLICIT);
+                 return true; // true if the callback consumed the long click, false otherwise.
+             }
+         });
+        myTextBox.setOnEditorActionListener(new TextView.OnEditorActionListener() {     // https://developer.android.com/reference/android/widget/TextView#setOnEditorActionListener%28android.widget.TextView.OnEditorActionListener%29
+            @Override                                                                   // This will be called when the enter key is pressed, or ...
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                TAG = this.toString();
+                Log.d(TAG, "OnEditorActionListener(): disable focus on pressing keyboard Done");
+                // hide soft keyboard
+                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                imm.showSoftInput(myTextBox, InputMethodManager.HIDE_IMPLICIT_ONLY);
+                imm.hideSoftInputFromWindow(myTextBox.getWindowToken(), 0); // https://github.com/codepath/android_guides/wiki/Working-with-the-Soft-Keyboard
+                // hopefully implicit calls onKeyboardHidden(0);  //
+                return true;
+            }
+        });
+
         Context myContext = getApplicationContext();
         String myPhoneNumber = "???";
         if (myContext != null) myPhoneNumber = getOwnPhoneNumber(myContext);
@@ -198,6 +245,18 @@ public class MainActivity extends AppCompatActivity{
         }
         setSuggestSendingSMStoCallee(settings.getBoolean("suggestSendingSMStoCallee", true));
         Log.d(TAG, "set suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
+    }
+
+    private void restoreSettingSavedPhoneNumber() {
+        TAG = "restoreSettingSavedPhoneNumber(): ";
+        // Restore preferences
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
+        Map<String,?> keys = settings.getAll();
+        for(Map.Entry<String,?> entry : keys.entrySet()){
+            Log.d(TAG + " pref value", entry.getKey() + " = " +  entry.getValue().toString());
+        }
+        setOwnPhoneNumber(settings.getString("SavedPhoneNumber", ""));
+        Log.d(TAG, "set ownPhoneNumber := " + MainActivity.ownPhoneNumber);
     }
 
     public void checkAndSetRequiredPermissions() {
@@ -273,6 +332,7 @@ public class MainActivity extends AppCompatActivity{
         editor.putBoolean("suggestSendingSMStoCallee", isSuggestSendingSMStoCallee());
         editor.putBoolean("requiredPermissionREAD_PHONE_STATEwasGranted", isRequiredPermissionREAD_PHONE_STATEgranted());
         editor.putBoolean("requiredPermissionPROCESS_OUTGOING_CALLSwasGranted", isRequiredPermissionPROCESS_OUTGOING_CALLgranted());
+        editor.putString("SavedPhoneNumber", getOwnPhoneNumber(getApplicationContext()));
         editor.commit();
         Map<String,?> keys = settings.getAll();
         for(Map.Entry<String,?> entry : keys.entrySet()){
@@ -286,14 +346,12 @@ public class MainActivity extends AppCompatActivity{
             // http://www.mysamplecode.com/2012/06/android-edittext-text-change-listener.html
             if (isRequiredPermissionREAD_PHONE_STATEgranted()) {
                 TelephonyManager tMgr = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-                String  Line1Number;
+                String Line1Number;
                 try {
                     Line1Number = tMgr.getLine1Number();
-                }
-                catch (SecurityException se) {
+                } catch (SecurityException se) {
                     Line1Number = context.getString(R.string.UnknownPhoneNumber);
-                }
-                catch (Exception e)  {
+                } catch (Exception e) {
                     Line1Number = context.getString(R.string.DefaultPhoneNumber);
                 }
                 setOwnPhoneNumber(context, Line1Number);
@@ -308,12 +366,12 @@ public class MainActivity extends AppCompatActivity{
                     if (formattedNumber != null) setOwnPhoneNumber(context, formattedNumber);
                 }
             } else {
-            /*
-            http://stackoverflow.com/questions/2480288/programmatically-obtain-the-phone-number-of-the-android-phone
-            Query all the INBOX folder SMS by sms provider and get the "TO" numbers or the SENT folder - "FROM" numbers.
-            Extra benefits of this trick: 1. you can get all the line numbers if there is multi sim in the device.
-            You will get all the sim numbers ever used in the device, check time frame (sms received or sent only today) etc.
-             */
+        /*
+        http://stackoverflow.com/questions/2480288/programmatically-obtain-the-phone-number-of-the-android-phone
+        Query all the INBOX folder SMS by sms provider and get the "TO" numbers or the SENT folder - "FROM" numbers.
+        Extra benefits of this trick: 1. you can get all the line numbers if there is multi sim in the device.
+        You will get all the sim numbers ever used in the device, check time frame (sms received or sent only today) etc.
+         */
                 setOwnPhoneNumber(context, context.getString(R.string.UnknownPhoneNumber));
             }
         }
@@ -514,6 +572,22 @@ public class MainActivity extends AppCompatActivity{
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public void onKeyboardShown(int keyboardHeight) {
+
+    }
+
+    @Override
+    public void onKeyboardHidden(int keyboardHeight) {
+        TAG = "onKeyboardHidden";
+        final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
+        String number = String.valueOf(myTextBox.getText());
+        Log.d(TAG, "                        : save number = '" + number + "' to SharedPreferences");
+        setOwnPhoneNumber(number);
+        myTextBox.setFocusable(false);
+        myTextBox.setFocusableInTouchMode(false);
     }
 }
 
