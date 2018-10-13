@@ -99,8 +99,8 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
         // TODO: do not show activity if called from notification, just send SMS
         setContentView(R.layout.activity_main);
 
-        checkAndSetRequiredPermissions();
-        restoreSettingSavedPhoneNumber();
+        restoreSettingSavedPhoneNumber();  // need to set before checkAndSetRequiredPermissions()
+        checkAndSetRequiredPermissions();  // as it calls SavePreferences();
 
         Log.d(TAG, "onCreate(): ownPhoneNumber = '" + getOwnPhoneNumber(getApplicationContext()) + "'");
         // retrieve calling number, if activity was started by Notification, i.e. a calling number has been set
@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
                  // show soft keyboard
                  InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
                  imm.showSoftInput(myTextBox, InputMethodManager.SHOW_IMPLICIT);
-                 return true; // true if the callback consumed the long click, false otherwise.
+                 return false; // true if the callback consumed the long click, false otherwise.
              }
          });
         myTextBox.setOnEditorActionListener(new TextView.OnEditorActionListener() {     // https://developer.android.com/reference/android/widget/TextView#setOnEditorActionListener%28android.widget.TextView.OnEditorActionListener%29
@@ -241,7 +241,7 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
         Map<String,?> keys = settings.getAll();
         for(Map.Entry<String,?> entry : keys.entrySet()){
-            Log.d(TAG + " pref value", entry.getKey() + " = " +  entry.getValue().toString());
+            Log.d(TAG + " pref value for ", entry.getKey() + " = " +  entry.getValue().toString());
         }
         setSuggestSendingSMStoCallee(settings.getBoolean("suggestSendingSMStoCallee", true));
         Log.d(TAG, "set suggestSendingSMStoCallee := " + isSuggestSendingSMStoCallee());
@@ -253,7 +253,7 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this.getApplicationContext());
         Map<String,?> keys = settings.getAll();
         for(Map.Entry<String,?> entry : keys.entrySet()){
-            Log.d(TAG + " pref value", entry.getKey() + " = " +  entry.getValue().toString());
+            Log.d(TAG + " pref value for ", entry.getKey() + " = " +  entry.getValue().toString());
         }
         setOwnPhoneNumber(settings.getString("SavedPhoneNumber", ""));
         Log.d(TAG, "set ownPhoneNumber := " + MainActivity.ownPhoneNumber);
@@ -336,7 +336,7 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
         editor.commit();
         Map<String,?> keys = settings.getAll();
         for(Map.Entry<String,?> entry : keys.entrySet()){
-            Log.d(TAG, "SavePreferences(): pref value" + entry.getKey() + ": " +  entry.getValue().toString());
+            Log.d(TAG, "SavePreferences(): pref value for " + entry.getKey() + " = " +  entry.getValue().toString());
         }
         Log.d(TAG, "SavePreferences(): finished");
     }
@@ -396,7 +396,7 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
         else {
             _ownPhoneNumber =  context.getString(R.string.UnknownPhoneNumber);
         }
-        MainActivity.ownPhoneNumber = _ownPhoneNumber;
+        setOwnPhoneNumber(_ownPhoneNumber);
     }
 
     @NonNull
@@ -584,6 +584,12 @@ public class MainActivity extends AppCompatActivity implements KeyboardStateObse
         TAG = "onKeyboardHidden";
         final EditText myTextBox = (EditText) findViewById(R.id.MyNumber);
         String number = String.valueOf(myTextBox.getText());
+        if (number.length() < 3) {
+            setOwnPhoneNumber("");
+            getOwnPhoneNumber(getApplicationContext());
+            number = ownPhoneNumber;
+            myTextBox.setText(number);
+        }
         Log.d(TAG, "                        : save number = '" + number + "' to SharedPreferences");
         setOwnPhoneNumber(number);
         myTextBox.setFocusable(false);
