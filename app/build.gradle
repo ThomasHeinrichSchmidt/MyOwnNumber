@@ -9,11 +9,11 @@ android {
             storePassword 'JuwiFopp7=Mavx'
         }
     }
-    compileSdkVersion 23
+    compileSdkVersion 26
     buildToolsVersion '27.0.3'
     defaultConfig {
         applicationId "de.thschmidt.myownnumber"
-        minSdkVersion 8
+        minSdkVersion 14               // 14 = Android 4.0. (ICE_CREAM_SANDWICH), 8 = Android 2.2 (FROYO) - currently (15.10.2018) active users have min. Android 4.03 = 15
         targetSdkVersion 26
         versionCode 10
         versionName "1.4"
@@ -32,7 +32,8 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:23.0.0'
+    // implementation 'com.android.support:appcompat-v7:23.0.0'  // needed for NotificationChannel
+    implementation 'com.android.support:appcompat-v7:26.0.0'
     // Unit testing - https://developer.android.com/training/testing/unit-testing/local-unit-tests.html
     // Required -- JUnit 4 framework
     testImplementation 'junit:junit:4.12'
